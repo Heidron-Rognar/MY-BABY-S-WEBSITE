@@ -91,6 +91,16 @@
 
           <section class="field-group">
             <div class="group-label">
+              <span>🖼️ Images</span>
+              <span class="muted small" id="img-count"></span>
+            </div>
+            <div id="f-images" class="img-grid" aria-label="Images"></div>
+            <input type="file" id="f-image-input" accept="image/*" multiple hidden />
+            <p class="muted small hint">Tip: you can also paste or drag photos here. Resized to max 2048px to fit the free storage, then sent to you on Telegram at posting time. Videos aren't supported — put a Drive link in the notes.</p>
+          </section>
+
+          <section class="field-group">
+            <div class="group-label">
               <span>📅 Posting date</span>
               <button type="button" class="link-btn" data-action="clear-date">No date yet</button>
             </div>
@@ -105,6 +115,16 @@
               <button type="button" class="chip" data-quick="nextweek">Next week</button>
             </div>
             <p id="reminder-preview" class="muted small"></p>
+            <div class="reminder-box" id="reminder-box">
+              <div class="reminder-head">
+                <span>🔔 Reminders</span>
+                <div class="segmented segmented-sm" id="f-rem-mode" role="radiogroup" aria-label="Reminder mode">
+                  <button type="button" role="radio" data-mode="default">My defaults</button>
+                  <button type="button" role="radio" data-mode="custom">Custom</button>
+                </div>
+              </div>
+              <div id="f-reminders"></div>
+            </div>
           </section>
 
           <section class="field-group">
@@ -126,6 +146,22 @@
             <summary>📝 Notes, shot list, links</summary>
             <textarea id="f-notes" rows="4" maxlength="5000" placeholder="Music to use, outfit, location, collab tags, drive link…"></textarea>
           </details>
+        </div>
+
+        <div id="lightbox" class="lightbox" hidden>
+          <div class="lightbox-top">
+            <span id="lb-label" class="lb-label"></span>
+            <button type="button" class="icon-btn lb-close" data-lb="close" aria-label="Close preview">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
+            </button>
+          </div>
+          <img id="lb-img" alt="" />
+          <div class="lightbox-actions">
+            <button type="button" class="btn btn-ghost btn-sm" data-lb="left">◀ Move</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-lb="right">Move ▶</button>
+            <a class="btn btn-ghost btn-sm" id="lb-download" download>⬇ Download</a>
+            <button type="button" class="btn btn-danger-ghost btn-sm" data-lb="remove">Remove</button>
+          </div>
         </div>
 
         <footer class="editor-foot">

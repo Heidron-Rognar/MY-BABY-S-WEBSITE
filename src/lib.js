@@ -1,6 +1,11 @@
 /** Pure helpers shared by the worker (and unit tests). No Cloudflare APIs in here. */
 
 export const STATUSES = ["idea", "draft", "ready", "posted"];
+export const MAX_REMINDER_MIN = 20160; // 14 days
+export const MAX_REMINDERS = 8;
+export const MAX_IMAGES_PER_POST = 10;
+export const MAX_IMAGE_BYTES = 1_400_000; // stored base64 in D1 (row limit ~2 MB)
+export const MAX_THUMB_BYTES = 150_000;
 
 export const DEFAULT_SETTINGS = {
   app_name: "Caption Studio",
@@ -50,12 +55,7 @@ export function normalizeSettings(raw = {}) {
   if (raw.app_name !== undefined) s.app_name = str(raw.app_name, 60) || DEFAULT_SETTINGS.app_name;
   if (raw.content_types !== undefined) s.content_types = cleanList(raw.content_types, DEFAULT_SETTINGS.content_types);
   if (raw.platforms !== undefined) s.platforms = cleanList(raw.platforms, DEFAULT_SETTINGS.platforms);
-  if (raw.reminder_offsets !== undefined) {
-    const arr = Array.isArray(raw.reminder_offsets) ? raw.reminder_offsets : [];
-    s.reminder_offsets = [...new Set(arr.map((n) => Math.round(Number(n))).filter((n) => Number.isFinite(n) && n >= 0 && n <= 20160))]
-      .sort((a, b) => b - a)
-      .slice(0, 8);
-  }
+  if (raw.reminder_offsets !== undefined) s.reminder_offsets = normalizeOffsets(raw.reminder_offsets);
   if (raw.digest_hour !== undefined) {
     const h = Math.round(Number(raw.digest_hour));
     s.digest_hour = Number.isFinite(h) && h >= -1 && h <= 23 ? h : DEFAULT_SETTINGS.digest_hour;
@@ -73,6 +73,14 @@ export function normalizeSettings(raw = {}) {
   return s;
 }
 
+/** Clean a list of "minutes before" values: whole numbers 0..14 days, unique, largest first, max 8. */
+export function normalizeOffsets(value) {
+  const arr = Array.isArray(value) ? value : [];
+  return [...new Set(arr.map((n) => Math.round(Number(n))).filter((n) => Number.isFinite(n) && n >= 0 && n <= MAX_REMINDER_MIN))]
+    .sort((a, b) => b - a)
+    .slice(0, MAX_REMINDERS);
+}
+
 export function normalizePostInput(body = {}) {
   const title = str(body.title, 200);
   const caption = typeof body.caption === "string" ? body.caption.replace(/\r\n/g, "\n").slice(0, 10000) : "";
@@ -87,8 +95,12 @@ export function normalizePostInput(body = {}) {
     if (!Number.isFinite(t)) return { error: "Invalid scheduled date" };
     scheduled_at = new Date(t).toISOString();
   }
-  if (!title && !caption.trim()) return { error: "Write a caption or a title first" };
-  return { value: { title, caption, content_type, platforms, notes, status, scheduled_at } };
+  // null = use the default reminder times from Settings; an array = custom times for this post.
+  let reminder_offsets = null;
+  if (Array.isArray(body.reminder_offsets)) reminder_offsets = normalizeOffsets(body.reminder_offsets);
+
+  if (!title && !caption.trim() && !body.has_images) return { error: "Write a caption or a title first" };
+  return { value: { title, caption, content_type, platforms, notes, status, scheduled_at, reminder_offsets } };
 }
 
 /**
@@ -105,7 +117,18 @@ export function computeDueReminders(post, offsets, sent, now, { nudgeAfterMin = 
   const key = (o) => `${post.id}|${o}|${post.scheduled_at}`;
 
   if (sched >= now - 30 * 60e3) {
+    // If a closer reminder was already sent (e.g. "1 hour before"), never send an earlier one
+    // that was added later (e.g. someone adds "1 day before" afterwards).
+    let closestSent = Infinity;
+    const prefix = `${post.id}|`;
+    const suffix = `|${post.scheduled_at}`;
+    for (const k of sent) {
+      if (!k.startsWith(prefix) || !k.endsWith(suffix)) continue;
+      const o = Number(k.slice(prefix.length, k.length - suffix.length));
+      if (o >= 0) closestSent = Math.min(closestSent, o);
+    }
     for (const o of offsets) {
+      if (o > closestSent) continue;
       if (sched - o * 60e3 <= now && !sent.has(key(o))) result.due.push(o);
     }
   }
@@ -157,6 +180,16 @@ export function relativeLabel(diffMs, timeZone, now, schedMs) {
   if (dayDiff <= 0) return "later today";
   if (dayDiff === 1) return "tomorrow";
   return `in ${dayDiff} days`;
+}
+
+/** "45 min before", "2 hours before", "1 day before", "1 h 30 min before", "At posting time". */
+export function offsetLabel(min) {
+  if (min === 0) return "At posting time";
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  if (min % 1440 === 0) return `${plural(min / 1440, "day")} before`;
+  if (min % 60 === 0) return `${plural(min / 60, "hour")} before`;
+  if (min > 60) return `${Math.floor(min / 60)} h ${min % 60} min before`;
+  return `${min} min before`;
 }
 
 export function escapeHtml(s) {

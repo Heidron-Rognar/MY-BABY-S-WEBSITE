@@ -18,6 +18,10 @@ import {
   escapeHtml,
   truncate,
   STATUSES,
+  MAX_REMINDER_MIN,
+  MAX_IMAGES_PER_POST,
+  MAX_IMAGE_BYTES,
+  MAX_THUMB_BYTES,
 } from "./lib.js";
 
 const enc = new TextEncoder();
@@ -59,7 +63,29 @@ function ensureSchema(env) {
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
       )`),
-    ]).catch((err) => {
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS images (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER NOT NULL,
+        position INTEGER NOT NULL DEFAULT 0,
+        mime TEXT NOT NULL,
+        width INTEGER,
+        height INTEGER,
+        size INTEGER NOT NULL,
+        data TEXT NOT NULL,
+        thumb TEXT,
+        created_at TEXT NOT NULL
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_images_post ON images(post_id, position)`),
+    ])
+      .then(async () => {
+        // Lightweight migrations for databases created by older versions of the app.
+        const { results } = await env.DB.prepare("PRAGMA table_info(posts)").all();
+        const cols = new Set(results.map((c) => c.name));
+        if (!cols.has("reminder_offsets")) {
+          await env.DB.prepare("ALTER TABLE posts ADD COLUMN reminder_offsets TEXT").run();
+        }
+      })
+      .catch((err) => {
       schemaPromise = null;
       throw err;
     });
@@ -89,20 +115,72 @@ async function saveSettings(env, partial) {
   if (stmts.length) await env.DB.batch(stmts);
 }
 
-function rowToPost(row) {
-  let platforms = [];
+function parseJson(value, fallback) {
   try {
-    platforms = JSON.parse(row.platforms || "[]");
+    return value == null ? fallback : JSON.parse(value);
   } catch {
-    platforms = [];
+    return fallback;
   }
-  return { ...row, platforms };
+}
+
+function rowToPost(row, images = []) {
+  const reminder_offsets = parseJson(row.reminder_offsets, null);
+  return {
+    ...row,
+    platforms: parseJson(row.platforms, []),
+    reminder_offsets: Array.isArray(reminder_offsets) ? reminder_offsets : null,
+    images,
+  };
+}
+
+const IMAGE_META_COLS = "id, post_id, position, mime, width, height, size";
+const imageMeta = (r) => ({ id: r.id, width: r.width, height: r.height, size: r.size, mime: r.mime });
+
+/** Image metadata (no bytes) grouped by post id. Pass null to load for every post. */
+async function imagesByPost(env, postIds = null) {
+  const stmt =
+    postIds === null
+      ? env.DB.prepare(`SELECT ${IMAGE_META_COLS} FROM images ORDER BY post_id, position, id`)
+      : env.DB.prepare(
+          `SELECT ${IMAGE_META_COLS} FROM images WHERE post_id IN (SELECT value FROM json_each(?)) ORDER BY post_id, position, id`
+        ).bind(JSON.stringify(postIds));
+  const { results } = await stmt.all();
+  const map = new Map();
+  for (const r of results) {
+    if (!map.has(r.post_id)) map.set(r.post_id, []);
+    map.get(r.post_id).push(imageMeta(r));
+  }
+  return map;
+}
+
+async function withImages(env, rows) {
+  if (!rows.length) return [];
+  const map = await imagesByPost(env, rows.map((r) => r.id));
+  return rows.map((r) => rowToPost(r, map.get(r.id) || []));
 }
 
 async function getPost(env, id) {
   const row = await env.DB.prepare("SELECT * FROM posts WHERE id = ?").bind(id).first();
-  return row ? rowToPost(row) : null;
+  return row ? (await withImages(env, [row]))[0] : null;
 }
+
+/* ---------- base64 helpers (images are stored as base64 text in D1) ---------- */
+
+function bytesToBase64(bytes) {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  return btoa(bin);
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 async function setPostStatus(env, id, status) {
   const now = new Date().toISOString();
@@ -203,6 +281,41 @@ async function tg(env, method, payload) {
   return data.result;
 }
 
+/** Telegram call with file uploads (multipart). `files` = { name: { bytes, mime, filename } }. */
+async function tgUpload(env, method, fields, files) {
+  const base = env.TELEGRAM_API_BASE || "https://api.telegram.org";
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, typeof v === "string" ? v : JSON.stringify(v));
+  for (const [name, f] of Object.entries(files)) form.append(name, new Blob([f.bytes], { type: f.mime }), f.filename);
+  const res = await fetch(`${base}/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", body: form });
+  const data = await res.json().catch(() => ({ ok: false, description: `HTTP ${res.status}` }));
+  if (!data.ok) throw new Error(data.description || "Telegram API error");
+  return data.result;
+}
+
+/** Send a post's images to Telegram: one photo, or an album of up to 10. */
+async function sendPostImages(env, chatId, post) {
+  if (!post.images?.length) return;
+  const ids = post.images.slice(0, 10).map((i) => i.id);
+  const { results } = await env.DB.prepare(
+    "SELECT id, mime, data FROM images WHERE id IN (SELECT value FROM json_each(?)) ORDER BY position, id"
+  )
+    .bind(JSON.stringify(ids))
+    .all();
+  if (!results.length) return;
+  const ext = (m) => (m === "image/png" ? "png" : m === "image/webp" ? "webp" : m === "image/gif" ? "gif" : "jpg");
+  const files = {};
+  results.forEach((r, i) => {
+    files[`photo${i}`] = { bytes: base64ToBytes(r.data), mime: r.mime, filename: `post-${post.id}-${i + 1}.${ext(r.mime)}` };
+  });
+  if (results.length === 1) {
+    await tgUpload(env, "sendPhoto", { chat_id: String(chatId) }, { photo: files.photo0 });
+  } else {
+    const media = results.map((_, i) => ({ type: "photo", media: `attach://photo${i}` }));
+    await tgUpload(env, "sendMediaGroup", { chat_id: String(chatId), media }, files);
+  }
+}
+
 const sendMessage = (env, chatId, text, extra = {}) =>
   tg(env, "sendMessage", {
     chat_id: chatId,
@@ -238,14 +351,27 @@ function reminderText(post, settings, now) {
   if (meta) lines.push(meta);
   if (post.title) lines.push(`\n<b>${escapeHtml(post.title)}</b>`);
   if (!isNow && post.caption) lines.push(`\n<i>${escapeHtml(truncate(post.caption, 280))}</i>`);
+  const nImg = post.images?.length || 0;
+  if (nImg && !isNow) lines.push(`🖼 ${nImg} image${nImg === 1 ? "" : "s"} attached — I'll send ${nImg === 1 ? "it" : "them"} at posting time.`);
   if (post.status !== "ready" && !isNow) lines.push(`\n⚠️ Status: <b>${escapeHtml(post.status)}</b> — caption not marked ready yet.`);
-  if (isNow && post.caption) lines.push("\n👇 Caption is in the next message — long-press to copy.");
+  if (isNow && (post.caption || nImg)) {
+    const parts = [nImg ? (nImg === 1 ? "your image" : `your ${nImg} images`) : "", post.caption ? "the caption (long-press to copy)" : ""].filter(Boolean);
+    lines.push(`\n👇 Next: ${parts.join(", then ")}.`);
+  }
   return { text: lines.join("\n"), isNow };
 }
 
 async function sendReminder(env, chatId, post, settings, now) {
   const { text, isNow } = reminderText(post, settings, now);
   await sendMessage(env, chatId, text, { reply_markup: postKeyboard(post, settings) });
+  if (isNow) {
+    try {
+      await sendPostImages(env, chatId, post);
+    } catch (err) {
+      console.error("sending images failed", post.id, err);
+      await sendMessage(env, chatId, `⚠️ Couldn't send the images (${escapeHtml(err.message)}). Open the website to download them.`).catch(() => {});
+    }
+  }
   if (isNow && post.caption) {
     // Plain message containing only the caption so it can be copied in one go.
     await tg(env, "sendMessage", { chat_id: chatId, text: post.caption.slice(0, 4096) });
@@ -272,7 +398,7 @@ async function postsBetween(env, fromIso, toIso) {
   )
     .bind(fromIso, toIso)
     .all();
-  return results.map(rowToPost);
+  return withImages(env, results);
 }
 
 /** Start/end of "today" in the configured time zone, as UTC Date objects. */
@@ -366,7 +492,7 @@ async function handleWebhook(request, env) {
         .bind(new Date(now).toISOString())
         .first();
       if (!row) await sendMessage(env, chatId, "Nothing coming up. Time to plan some content! ✨");
-      else await sendReminder(env, chatId, rowToPost(row), settings, now);
+      else await sendReminder(env, chatId, (await withImages(env, [row]))[0], settings, now);
     } else {
       await sendMessage(env, chatId, "Hi! 👋\n/today — today's posts\n/week — next 7 days\n/next — the next post");
     }
@@ -387,17 +513,16 @@ export async function runScheduled(env, now = Date.now()) {
   const report = { reminders: 0, nudges: 0, digest: false, errors: [] };
   if (!env.TELEGRAM_BOT_TOKEN || !chatId) return report;
 
-  const offsets = settings.reminder_offsets;
-  const maxOffset = Math.max(0, ...offsets);
   const lower = new Date(now - (settings.nudge_unposted ? 26 * 60 : 30) * 60e3).toISOString();
-  const upper = new Date(now + (maxOffset + 1) * 60e3).toISOString();
+  // Posts can have their own custom reminder times (up to 14 days before), so look that far ahead.
+  const upper = new Date(now + (MAX_REMINDER_MIN + 1) * 60e3).toISOString();
 
   const { results } = await env.DB.prepare(
     "SELECT * FROM posts WHERE status != 'posted' AND scheduled_at IS NOT NULL AND scheduled_at >= ? AND scheduled_at <= ? ORDER BY scheduled_at"
   )
     .bind(lower, upper)
     .all();
-  const posts = results.map(rowToPost);
+  const posts = await withImages(env, results);
 
   if (posts.length) {
     const ids = JSON.stringify(posts.map((p) => p.id));
@@ -411,6 +536,7 @@ export async function runScheduled(env, now = Date.now()) {
     const sent = new Set(sentRows.map((r) => `${r.post_id}|${r.offset_min}|${r.scheduled_at}`));
 
     for (const post of posts) {
+      const offsets = Array.isArray(post.reminder_offsets) ? post.reminder_offsets : settings.reminder_offsets;
       const { due, nudge } = computeDueReminders(post, offsets, sent, now, {
         nudgeAfterMin: settings.nudge_unposted ? NUDGE_AFTER_MIN : null,
         nudgeOffset: NUDGE_OFFSET,
@@ -518,7 +644,8 @@ async function handleApi(request, env, url) {
     const { results } = await env.DB.prepare(
       "SELECT * FROM posts ORDER BY CASE WHEN scheduled_at IS NULL THEN 1 ELSE 0 END, scheduled_at, id DESC"
     ).all();
-    return json({ posts: results.map(rowToPost) });
+    const imgs = await imagesByPost(env);
+    return json({ posts: results.map((r) => rowToPost(r, imgs.get(r.id) || [])) });
   }
 
   if (path === "/api/posts" && method === "POST") {
@@ -527,8 +654,8 @@ async function handleApi(request, env, url) {
     const now = new Date().toISOString();
     const p = input.value;
     const row = await env.DB.prepare(
-      `INSERT INTO posts (title, caption, content_type, platforms, scheduled_at, status, notes, posted_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+      `INSERT INTO posts (title, caption, content_type, platforms, scheduled_at, status, notes, posted_at, reminder_offsets, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
     )
       .bind(
         p.title,
@@ -539,6 +666,7 @@ async function handleApi(request, env, url) {
         p.status,
         p.notes,
         p.status === "posted" ? now : null,
+        p.reminder_offsets ? JSON.stringify(p.reminder_offsets) : null,
         now,
         now
       )
@@ -557,27 +685,106 @@ async function handleApi(request, env, url) {
     if (method === "PUT" || method === "PATCH") {
       const body = (await readJson(request)) || {};
       const merged = method === "PATCH" ? { ...existing, ...body } : body;
-      const input = normalizePostInput(merged);
+      const input = normalizePostInput({ ...merged, has_images: Boolean(body.has_images) || existing.images.length > 0 });
       if (input.error) return error(input.error);
       const p = input.value;
       const now = new Date().toISOString();
       const postedAt = p.status === "posted" ? existing.posted_at || now : null;
       const row = await env.DB.prepare(
         `UPDATE posts SET title = ?, caption = ?, content_type = ?, platforms = ?, scheduled_at = ?, status = ?,
-           notes = ?, posted_at = ?, updated_at = ? WHERE id = ? RETURNING *`
+           notes = ?, posted_at = ?, reminder_offsets = ?, updated_at = ? WHERE id = ? RETURNING *`
       )
-        .bind(p.title, p.caption, p.content_type, JSON.stringify(p.platforms), p.scheduled_at, p.status, p.notes, postedAt, now, id)
+        .bind(
+          p.title,
+          p.caption,
+          p.content_type,
+          JSON.stringify(p.platforms),
+          p.scheduled_at,
+          p.status,
+          p.notes,
+          postedAt,
+          p.reminder_offsets ? JSON.stringify(p.reminder_offsets) : null,
+          now,
+          id
+        )
         .first();
-      return json({ post: rowToPost(row) });
+      return json({ post: rowToPost(row, existing.images) });
     }
 
     if (method === "DELETE") {
       await env.DB.batch([
         env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(id),
         env.DB.prepare("DELETE FROM reminders_sent WHERE post_id = ?").bind(id),
+        env.DB.prepare("DELETE FROM images WHERE post_id = ?").bind(id),
       ]);
       return json({ ok: true });
     }
+  }
+
+  /* ---------- images ---------- */
+  const imgUpload = path.match(/^\/api\/posts\/(\d+)\/images$/);
+  if (imgUpload && method === "POST") {
+    const postId = Number(imgUpload[1]);
+    const exists = await env.DB.prepare("SELECT id FROM posts WHERE id = ?").bind(postId).first();
+    if (!exists) return error("Post not found", 404);
+    const count = (await env.DB.prepare("SELECT COUNT(*) AS n FROM images WHERE post_id = ?").bind(postId).first()).n;
+    if (count >= MAX_IMAGES_PER_POST) return error(`Max ${MAX_IMAGES_PER_POST} images per post`);
+
+    let form;
+    try {
+      form = await request.formData();
+    } catch {
+      return error("Expected an image upload");
+    }
+    const file = form.get("image");
+    const thumb = form.get("thumb");
+    if (!file || typeof file === "string") return error("No image received");
+    if (!IMAGE_TYPES.has(file.type)) return error("Only JPG, PNG, WebP or GIF images are supported");
+    if (file.size > MAX_IMAGE_BYTES) return error(`Image is too large (max ${(MAX_IMAGE_BYTES / 1e6).toFixed(1)} MB after resizing)`);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let thumbB64 = null;
+    if (thumb && typeof thumb !== "string" && IMAGE_TYPES.has(thumb.type) && thumb.size <= MAX_THUMB_BYTES) {
+      thumbB64 = bytesToBase64(new Uint8Array(await thumb.arrayBuffer()));
+    }
+    const int = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.round(Number(v)) : null);
+    const row = await env.DB.prepare(
+      `INSERT INTO images (post_id, position, mime, width, height, size, data, thumb, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${IMAGE_META_COLS}`
+    )
+      .bind(postId, count, file.type, int(form.get("width")), int(form.get("height")), bytes.length, bytesToBase64(bytes), thumbB64, new Date().toISOString())
+      .first();
+    return json({ image: imageMeta(row) }, 201);
+  }
+
+  if (imgUpload && method === "PUT") {
+    // Reorder: { ids: [3, 1, 2] }
+    const postId = Number(imgUpload[1]);
+    const body = (await readJson(request)) || {};
+    const ids = Array.isArray(body.ids) ? body.ids.map(Number).filter(Boolean) : [];
+    if (ids.length) {
+      await env.DB.batch(
+        ids.map((imgId, i) => env.DB.prepare("UPDATE images SET position = ? WHERE id = ? AND post_id = ?").bind(i, imgId, postId))
+      );
+    }
+    return json({ images: (await imagesByPost(env, [postId])).get(postId) || [] });
+  }
+
+  const imgMatch = path.match(/^\/api\/images\/(\d+)$/);
+  if (imgMatch && method === "GET") {
+    const wantThumb = url.searchParams.get("size") === "thumb";
+    const row = await env.DB.prepare(`SELECT mime, ${wantThumb ? "COALESCE(thumb, data)" : "data"} AS b64, thumb IS NOT NULL AS has_thumb FROM images WHERE id = ?`)
+      .bind(Number(imgMatch[1]))
+      .first();
+    if (!row) return error("Image not found", 404);
+    const mime = wantThumb && row.has_thumb ? "image/jpeg" : row.mime;
+    const headers = { "content-type": mime, "cache-control": "private, max-age=31536000, immutable" };
+    if (url.searchParams.get("download")) headers["content-disposition"] = `attachment; filename="image-${imgMatch[1]}.${mime.split("/")[1].replace("jpeg", "jpg")}"`;
+    return new Response(base64ToBytes(row.b64), { headers });
+  }
+
+  if (imgMatch && method === "DELETE") {
+    await env.DB.prepare("DELETE FROM images WHERE id = ?").bind(Number(imgMatch[1])).run();
+    return json({ ok: true });
   }
 
   /* ---------- settings ---------- */

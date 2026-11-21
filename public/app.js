@@ -28,6 +28,51 @@ const REMINDER_CHOICES = [
   [0, "At posting time"],
 ];
 
+const MAX_REMINDERS = 8;
+const MAX_REMINDER_MIN = 20160; // 14 days
+const MAX_IMAGES = 10;
+const IMG_MAX_EDGE = 2048;
+const IMG_MAX_BYTES = 1_300_000;
+const THUMB_EDGE = 480;
+
+/** "45 min before", "2 hours before", "1 day before", "1 h 30 min before", "At posting time" */
+function offsetLabel(min, { short = false } = {}) {
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  let t;
+  if (min === 0) return short ? "at posting time" : "At posting time";
+  if (min % 1440 === 0) t = plural(min / 1440, "day");
+  else if (min % 60 === 0) t = plural(min / 60, "hour");
+  else if (min > 60) t = `${Math.floor(min / 60)} h ${min % 60} min`;
+  else t = `${min} min`;
+  return short ? t : `${t} before`;
+}
+
+function adderHTML(id) {
+  return `<div class="adder" data-adder="${id}">
+    <input type="number" min="1" max="999" step="1" inputmode="numeric" placeholder="e.g. 45" aria-label="Amount" />
+    <select aria-label="Unit"><option value="1">minutes</option><option value="60">hours</option><option value="1440">days</option></select>
+    <span class="muted small">before</span>
+    <button type="button" class="btn btn-ghost btn-sm" data-add>Add</button>
+  </div>`;
+}
+
+/** Read an adder; returns minutes or null (and shows a toast on invalid input). */
+function readAdder(root, existing) {
+  const n = Number($("input", root).value);
+  const unit = Number($("select", root).value);
+  if (!Number.isFinite(n) || n <= 0) {
+    toast("Type a number first", "error");
+    $("input", root).focus();
+    return null;
+  }
+  const min = Math.round(n * unit);
+  if (min > MAX_REMINDER_MIN) return toast("Max is 14 days before", "error"), null;
+  if (existing.includes(min)) return toast("You already have that reminder", "error"), null;
+  if (existing.length >= MAX_REMINDERS) return toast(`Max ${MAX_REMINDERS} reminders`, "error"), null;
+  $("input", root).value = "";
+  return min;
+}
+
 const state = {
   posts: [],
   settings: null,
@@ -104,6 +149,7 @@ function dayHeading(d) {
 function relativeFromNow(d) {
   const mins = Math.round((d - Date.now()) / 60e3);
   const abs = Math.abs(mins);
+  if (abs < 1) return "now";
   const label = abs < 60 ? `${abs} min` : abs < 48 * 60 ? `${Math.round(abs / 60)} h` : `${Math.round(abs / 1440)} days`;
   return mins >= 0 ? `in ${label}` : `${label} ago`;
 }
@@ -344,8 +390,19 @@ function cardHTML(p, { showDate = false } = {}) {
         <span class="spacer" style="flex:1"></span>
         <span class="status status-${p.status}">${STATUS_LABELS[p.status]}</span>
       </div>
-      ${p.title ? `<div class="card-title">${esc(p.title)}</div>` : ""}
-      <p class="card-caption ${caption ? "" : "empty"}">${caption ? esc(caption) : "No caption yet"}</p>
+      <div class="card-content">
+        <div class="card-text">
+          ${p.title ? `<div class="card-title">${esc(p.title)}</div>` : ""}
+          <p class="card-caption ${caption ? "" : "empty"}">${caption ? esc(caption) : p.images?.length ? "Image only — no caption yet" : "No caption yet"}</p>
+        </div>
+        ${
+          p.images?.length
+            ? `<div class="card-thumb"><img loading="lazy" alt="" src="/api/images/${p.images[0].id}?size=thumb" />${
+                p.images.length > 1 ? `<span>+${p.images.length - 1}</span>` : ""
+              }</div>`
+            : ""
+        }
+      </div>
       <div class="card-foot">
         ${p.content_type ? `<span class="badge type">${esc(p.content_type)}</span>` : ""}
         ${(p.platforms || []).map((x) => `<span class="badge">${esc(x)}</span>`).join("")}
@@ -582,6 +639,11 @@ const ed = {
 let edType = "";
 let edPlatforms = [];
 let edStatus = "draft";
+let edReminders = null; // null = use defaults from Settings, array = custom minutes for this post
+let edImages = []; // { id, width, height } for saved images, { key, pending: true, blob, thumb, url } for new ones
+let edRemovedImages = [];
+let lightboxIndex = -1;
+let pendingKey = 0;
 
 function openEditor(post, { day = null, ideas = false } = {}) {
   state.editing = post;
@@ -610,8 +672,14 @@ function openEditor(post, { day = null, ideas = false } = {}) {
   edType = post ? post.content_type : ideas ? "" : settings.content_types[0] || "";
   edPlatforms = post ? [...(post.platforms || [])] : settings.platforms.slice(0, 1);
   edStatus = post ? post.status : ideas ? "idea" : "draft";
+  edReminders = Array.isArray(post?.reminder_offsets) ? [...post.reminder_offsets] : null;
+  clearPendingImages();
+  edImages = (post?.images || []).map((i) => ({ ...i }));
+  edRemovedImages = [];
+  closeLightbox();
 
   renderEditorChips();
+  renderEditorImages();
   updateCaptionStats();
   updateReminderPreview();
   state.editorSnapshot = editorSignature();
@@ -695,6 +763,7 @@ function editorDate() {
 }
 
 function updateReminderPreview() {
+  renderEditorReminders();
   const el = $("#reminder-preview");
   const d = editorDate();
   if (!d) {
@@ -705,13 +774,77 @@ function updateReminderPreview() {
     el.textContent = "Marked as posted — no reminders will be sent.";
     return;
   }
-  const offsets = state.settings.reminder_offsets || [];
-  const labels = REMINDER_CHOICES.filter(([m]) => offsets.includes(m)).map(([, l]) => l.replace(" before", ""));
-  const rel = relativeFromNow(d);
-  el.textContent = offsets.length
-    ? `🔔 ${fmtDate(d)}, ${fmtTime(d)} (${rel}). Telegram reminders: ${labels.join(", ")}.`
-    : `${fmtDate(d)}, ${fmtTime(d)} (${rel}). Reminders are turned off in Settings.`;
+  el.textContent = `🗓 ${fmtDate(d)}, ${fmtTime(d)} (${relativeFromNow(d)})`;
 }
+
+function renderEditorReminders() {
+  const box = $("#reminder-box");
+  const hasDate = Boolean(ed.date.value) && edStatus !== "posted";
+  box.hidden = !hasDate;
+  if (!hasDate) return;
+  const custom = Array.isArray(edReminders);
+  $$("#f-rem-mode button").forEach((b) => b.setAttribute("aria-checked", String((b.dataset.mode === "custom") === custom)));
+  const target = $("#f-reminders");
+  if (!custom) {
+    const offs = state.settings.reminder_offsets || [];
+    target.innerHTML = `<p class="muted small" style="margin:0">${
+      offs.length ? esc(offs.map((m) => offsetLabel(m, { short: true })).join(" · ")) : "No default reminders"
+    } — <a href="#settings" data-goto-settings>change defaults</a></p>`;
+    return;
+  }
+  const list = [...edReminders].sort((a, b) => b - a);
+  target.innerHTML = `<div class="rem-chips">${
+    list.length
+      ? list.map((m) => `<span class="rem-chip">${esc(offsetLabel(m))}<button type="button" data-rem-remove="${m}" aria-label="Remove">×</button></span>`).join("")
+      : `<span class="muted small">No reminders for this post</span>`
+  }</div>
+  <div style="margin-top:8px">${adderHTML("post")}</div>
+  <div class="rem-chips" style="margin-top:8px">${[0, 15, 30, 60, 180, 1440]
+    .filter((m) => !list.includes(m))
+    .map((m) => `<button type="button" class="chip" data-rem-quick="${m}">+ ${esc(offsetLabel(m, { short: true }))}</button>`)
+    .join("")}</div>`;
+}
+
+$("#f-rem-mode").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-mode]");
+  if (!b) return;
+  if (b.dataset.mode === "custom" && !Array.isArray(edReminders)) edReminders = [...(state.settings.reminder_offsets || [])];
+  if (b.dataset.mode === "default") edReminders = null;
+  renderEditorReminders();
+});
+
+$("#f-reminders").addEventListener("click", (e) => {
+  if (e.target.closest("[data-goto-settings]")) {
+    e.preventDefault();
+    closeEditor();
+    if (!editor.open) location.hash = "#settings";
+    return;
+  }
+  const rm = e.target.closest("[data-rem-remove]");
+  if (rm) {
+    edReminders = edReminders.filter((m) => m !== Number(rm.dataset.remRemove));
+    return renderEditorReminders();
+  }
+  const quick = e.target.closest("[data-rem-quick]");
+  if (quick) {
+    if (edReminders.length >= MAX_REMINDERS) return toast(`Max ${MAX_REMINDERS} reminders`, "error");
+    edReminders = [...edReminders, Number(quick.dataset.remQuick)];
+    return renderEditorReminders();
+  }
+  if (e.target.closest("[data-add]")) {
+    const min = readAdder(e.target.closest("[data-adder]"), edReminders);
+    if (min !== null) {
+      edReminders = [...edReminders, min];
+      renderEditorReminders();
+    }
+  }
+});
+$("#f-reminders").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.matches("[data-adder] input")) {
+    e.preventDefault();
+    $("[data-add]", e.target.closest("[data-adder]")).click();
+  }
+});
 
 ed.caption.addEventListener("input", () => {
   updateCaptionStats();
@@ -741,7 +874,18 @@ $(".quick-dates").addEventListener("click", (e) => {
 });
 
 function editorSignature() {
-  return JSON.stringify([ed.title.value, ed.caption.value, ed.date.value, ed.time.value, ed.notes.value, edType, edPlatforms, edStatus]);
+  return JSON.stringify([
+    ed.title.value,
+    ed.caption.value,
+    ed.date.value,
+    ed.time.value,
+    ed.notes.value,
+    edType,
+    edPlatforms,
+    edStatus,
+    edReminders,
+    edImages.map((i) => i.id || i.key),
+  ]);
 }
 
 function editorPayload() {
@@ -754,6 +898,8 @@ function editorPayload() {
     status: edStatus,
     notes: ed.notes.value,
     scheduled_at: d ? d.toISOString() : null,
+    reminder_offsets: edReminders,
+    has_images: edImages.length > 0,
   };
 }
 
@@ -761,31 +907,287 @@ function closeEditor(force = false) {
   if (!force && editorSignature() !== state.editorSnapshot && !confirm("Discard your unsaved changes?")) return;
   editor.close();
   state.editing = null;
+  closeLightbox();
+  clearPendingImages();
 }
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const payload = editorPayload();
-  if (!payload.title && !payload.caption.trim()) {
-    toast("Write a caption or a title first", "error");
+  if (!payload.title && !payload.caption.trim() && !edImages.length) {
+    toast("Write a caption, a title or add an image first", "error");
     ed.caption.focus();
     return;
   }
+  if (edImages.some((i) => i.processing)) return toast("Still preparing images — one moment", "error");
   const buttons = $$('button[type="submit"]', form);
+  const setLabel = (t) => buttons.forEach((b) => (b.textContent = t));
   buttons.forEach((b) => (b.disabled = true));
+  const wasEditing = Boolean(state.editing);
+  let saved = null;
   try {
-    const res = state.editing
+    const res = wasEditing
       ? await api(`/api/posts/${state.editing.id}`, { method: "PUT", body: payload })
       : await api("/api/posts", { method: "POST", body: payload });
-    upsertLocal(res.post);
+    saved = res.post;
+    state.editing = saved; // from now on, retries update this post instead of creating a new one
+    upsertLocal(saved);
+    await syncImages(saved.id, setLabel);
+    const { post: fresh } = await api(`/api/posts/${saved.id}`);
+    upsertLocal(fresh);
     closeEditor(true);
     render();
-    toast(state.editing ? "Saved ✨" : res.post.scheduled_at ? "Scheduled 🗓️" : "Saved to ideas 💡");
+    toast(wasEditing ? "Saved ✨" : fresh.scheduled_at ? "Scheduled 🗓️" : "Saved to ideas 💡");
   } catch (err) {
     toast(err.message, "error");
+    if (saved) {
+      // The post itself is saved; keep the editor open so the remaining images can be retried.
+      $("#editor-title").textContent = "Edit caption";
+      $("#delete-btn").hidden = false;
+      $("#duplicate-btn").hidden = false;
+      renderEditorImages();
+      state.editorSnapshot = "";
+      render();
+    }
   } finally {
+    setLabel("Save");
     buttons.forEach((b) => (b.disabled = false));
   }
+});
+
+/** Apply image removals, uploads and ordering for a saved post. */
+async function syncImages(postId, setLabel) {
+  for (const id of [...edRemovedImages]) {
+    await api(`/api/images/${id}`, { method: "DELETE" });
+    edRemovedImages = edRemovedImages.filter((x) => x !== id);
+  }
+  const pending = edImages.filter((i) => i.pending);
+  let n = 0;
+  for (const img of pending) {
+    n++;
+    setLabel(`Uploading ${n}/${pending.length}…`);
+    const fd = new FormData();
+    fd.append("image", img.blob, img.name || "image.jpg");
+    if (img.thumb) fd.append("thumb", img.thumb, "thumb.jpg");
+    if (img.width) fd.append("width", String(img.width));
+    if (img.height) fd.append("height", String(img.height));
+    const res = await fetch(`/api/posts/${postId}/images`, { method: "POST", body: fd, credentials: "same-origin" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ? `Image upload failed: ${data.error}` : "Image upload failed");
+    URL.revokeObjectURL(img.url);
+    const i = edImages.indexOf(img);
+    if (i >= 0) edImages[i] = { ...data.image };
+  }
+  const ids = edImages.map((i) => i.id).filter(Boolean);
+  if (ids.length > 1) await api(`/api/posts/${postId}/images`, { method: "PUT", body: { ids } });
+}
+
+/* ---------- images in the editor ---------- */
+
+function clearPendingImages() {
+  for (const i of edImages) if (i.url) URL.revokeObjectURL(i.url);
+}
+
+function imgSrc(img, thumb = true) {
+  if (img.pending) return img.url;
+  return `/api/images/${img.id}${thumb ? "?size=thumb" : ""}`;
+}
+
+function renderEditorImages() {
+  const grid = $("#f-images");
+  grid.innerHTML =
+    edImages
+      .map(
+        (img, i) => `<div class="img-tile ${img.pending ? "pending" : ""} ${img.processing ? "busy" : ""}" data-img="${i}" role="button" tabindex="0" aria-label="Image ${i + 1}">
+          ${img.processing ? "" : `<img alt="" src="${esc(imgSrc(img))}" />`}
+          ${i === 0 ? `<span class="img-badge">Cover</span>` : ""}
+          <button type="button" class="img-x" data-img-remove="${i}" aria-label="Remove image">×</button>
+        </div>`
+      )
+      .join("") +
+    (edImages.length < MAX_IMAGES ? `<button type="button" class="img-add" data-img-add><span>+</span><span>Add photo</span></button>` : "");
+  $("#img-count").textContent = edImages.length ? `${edImages.length}/${MAX_IMAGES}` : "";
+}
+
+$("#f-images").addEventListener("click", (e) => {
+  const rm = e.target.closest("[data-img-remove]");
+  if (rm) {
+    e.stopPropagation();
+    removeImage(Number(rm.dataset.imgRemove));
+    return;
+  }
+  if (e.target.closest("[data-img-add]")) return $("#f-image-input").click();
+  const tile = e.target.closest("[data-img]");
+  if (tile && !edImages[Number(tile.dataset.img)]?.processing) openLightbox(Number(tile.dataset.img));
+});
+$("#f-images").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.matches("[data-img]")) openLightbox(Number(e.target.dataset.img));
+});
+
+$("#f-image-input").addEventListener("change", (e) => {
+  addImageFiles([...e.target.files]);
+  e.target.value = "";
+});
+
+function removeImage(i) {
+  const img = edImages[i];
+  if (!img) return;
+  if (img.id) edRemovedImages.push(img.id);
+  if (img.url) URL.revokeObjectURL(img.url);
+  edImages.splice(i, 1);
+  renderEditorImages();
+}
+
+async function addImageFiles(files) {
+  const images = files.filter((f) => f.type.startsWith("image/") || /\.(heic|heif)$/i.test(f.name));
+  if (!images.length) return files.length && toast("Only photos can be added (no videos)", "error");
+  const room = MAX_IMAGES - edImages.length;
+  if (room <= 0) return toast(`Max ${MAX_IMAGES} images per post`, "error");
+  if (images.length > room) toast(`Only the first ${room} added (max ${MAX_IMAGES})`, "error");
+  const slots = images.slice(0, room).map((file) => {
+    const slot = { key: `p${++pendingKey}`, pending: true, processing: true, name: file.name };
+    edImages.push(slot);
+    return [file, slot];
+  });
+  renderEditorImages();
+  for (const [file, slot] of slots) {
+    try {
+      Object.assign(slot, await prepareImage(file), { processing: false });
+      slot.url = URL.createObjectURL(slot.blob);
+    } catch (err) {
+      const i = edImages.indexOf(slot);
+      if (i >= 0) edImages.splice(i, 1);
+      toast(err.message, "error");
+    }
+    renderEditorImages();
+  }
+}
+
+async function decodeImage(file) {
+  try {
+    return await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      return img;
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  }
+}
+
+function encodeImage(source, maxEdge, quality, type = "image/jpeg") {
+  const w = source.width;
+  const h = source.height;
+  const scale = Math.min(1, maxEdge / Math.max(w, h));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  const ctx = canvas.getContext("2d");
+  if (type === "image/jpeg") {
+    ctx.fillStyle = "#fff"; // transparent PNGs get a white background
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve({ blob: b, width: canvas.width, height: canvas.height }) : reject(new Error("Couldn't process image"))), type, quality)
+  );
+}
+
+/** Resize/compress a photo in the browser so it fits the free database storage. */
+async function prepareImage(file) {
+  let source;
+  try {
+    source = await decodeImage(file);
+  } catch {
+    throw new Error(`Can't read “${file.name}”. Try a JPG or PNG (iPhone HEIC photos: share/export as JPG first).`);
+  }
+  const thumb = (await encodeImage(source, THUMB_EDGE, 0.78)).blob;
+  const small = Math.max(source.width, source.height) <= IMG_MAX_EDGE;
+  // Keep the original file untouched when it's already small enough (best quality).
+  if (small && file.size <= IMG_MAX_BYTES && ["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    return { blob: file, thumb, width: source.width, height: source.height };
+  }
+  for (const edge of [IMG_MAX_EDGE, 1600, 1280]) {
+    for (const q of [0.88, 0.8, 0.7]) {
+      const out = await encodeImage(source, edge, q);
+      if (out.blob.size <= IMG_MAX_BYTES) return { blob: out.blob, thumb, width: out.width, height: out.height };
+    }
+  }
+  throw new Error(`“${file.name}” is too large even after resizing`);
+}
+
+// Paste images (e.g. screenshots) and drag & drop onto the editor.
+editor.addEventListener("paste", (e) => {
+  const files = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith("image/"));
+  if (files.length) {
+    e.preventDefault();
+    addImageFiles(files);
+  }
+});
+editor.addEventListener("dragover", (e) => {
+  if ([...(e.dataTransfer?.types || [])].includes("Files")) {
+    e.preventDefault();
+    editor.classList.add("dragging");
+  }
+});
+editor.addEventListener("dragleave", (e) => {
+  if (e.target === editor || !editor.contains(e.relatedTarget)) editor.classList.remove("dragging");
+});
+editor.addEventListener("drop", (e) => {
+  editor.classList.remove("dragging");
+  if (e.dataTransfer?.files?.length) {
+    e.preventDefault();
+    addImageFiles([...e.dataTransfer.files]);
+  }
+});
+
+/* ---------- lightbox ---------- */
+
+function openLightbox(i) {
+  const img = edImages[i];
+  if (!img) return;
+  lightboxIndex = i;
+  $("#lb-img").src = imgSrc(img, false);
+  $("#lb-label").textContent = `Image ${i + 1} of ${edImages.length}${i === 0 ? " · cover" : ""}${img.pending ? " · not saved yet" : ""}`;
+  const dl = $("#lb-download");
+  dl.href = img.pending ? img.url : `/api/images/${img.id}?download=1`;
+  dl.setAttribute("download", img.pending ? img.name || "image.jpg" : "");
+  $('[data-lb="left"]').disabled = i === 0;
+  $('[data-lb="right"]').disabled = i === edImages.length - 1;
+  $("#lightbox").hidden = false;
+}
+
+function closeLightbox() {
+  lightboxIndex = -1;
+  const lb = $("#lightbox");
+  if (lb) {
+    lb.hidden = true;
+    $("#lb-img").removeAttribute("src");
+  }
+}
+
+$("#lightbox").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-lb]");
+  if (!b) {
+    if (e.target.id === "lightbox") closeLightbox();
+    return;
+  }
+  const i = lightboxIndex;
+  const act = b.dataset.lb;
+  if (act === "close") return closeLightbox();
+  if (act === "remove") {
+    closeLightbox();
+    return removeImage(i);
+  }
+  const j = act === "left" ? i - 1 : i + 1;
+  if (j < 0 || j >= edImages.length) return;
+  [edImages[i], edImages[j]] = [edImages[j], edImages[i]];
+  renderEditorImages();
+  openLightbox(j);
 });
 
 form.addEventListener("click", async (e) => {
@@ -825,15 +1227,35 @@ form.addEventListener("click", async (e) => {
     edStatus = copy.status === "posted" ? "draft" : copy.status;
     ed.date.value = "";
     ed.time.value = "";
+    // Copy images as new uploads.
+    const toCopy = edImages.filter((i) => !i.pending && i.id);
+    edImages = edImages.filter((i) => i.pending);
+    edRemovedImages = [];
     renderEditorChips();
     updateReminderPreview();
     state.editorSnapshot = "";
     toast("Duplicated — pick a new date and save");
+    for (const img of toCopy) {
+      const slot = { key: `p${++pendingKey}`, pending: true, processing: true, name: `image-${img.id}.jpg`, width: img.width, height: img.height };
+      edImages.push(slot);
+      renderEditorImages();
+      try {
+        const [full, th] = await Promise.all([fetch(`/api/images/${img.id}`), fetch(`/api/images/${img.id}?size=thumb`)]);
+        slot.blob = await full.blob();
+        slot.thumb = await th.blob();
+        slot.url = URL.createObjectURL(slot.blob);
+        slot.processing = false;
+      } catch {
+        edImages.splice(edImages.indexOf(slot), 1);
+      }
+      renderEditorImages();
+    }
   }
 });
 
 editor.addEventListener("cancel", (e) => {
   e.preventDefault();
+  if (lightboxIndex >= 0) return closeLightbox();
   closeEditor();
 });
 editor.addEventListener("click", (e) => {
@@ -888,6 +1310,12 @@ async function renderSettings(view) {
           ([m, label]) => `<label class="check"><input type="checkbox" value="${m}" ${s.reminder_offsets.includes(m) ? "checked" : ""}/> ${label}</label>`
         ).join("")}
       </div>
+      <div class="custom-row">
+        <span class="label">Custom times</span>
+        <div class="rem-chips" id="custom-offsets"></div>
+        ${adderHTML("settings")}
+        <span class="muted small">Reminders are checked every 5 minutes, so they can arrive up to ~5 min late. You can also set custom times on a single post.</span>
+      </div>
       <div class="settings-grid">
         <label class="field"><span>Morning summary of today's posts</span>
           <select id="digest-hour">
@@ -927,7 +1355,7 @@ async function renderSettings(view) {
 
     <section class="panel">
       <h2>💾 Your data</h2>
-      <p class="muted">Download a backup of every caption.</p>
+      <p class="muted">Download a backup of every caption (images aren't included — download them from each post).</p>
       <div class="row">
         <button class="btn btn-ghost" id="export-json">Download backup (JSON)</button>
         <button class="btn btn-ghost" id="export-csv">Download spreadsheet (CSV)</button>
@@ -993,9 +1421,44 @@ function bindSettings() {
     });
   }
 
-  $("#offsets").addEventListener("change", () => {
-    const offsets = $$("#offsets input:checked").map((i) => Number(i.value));
-    saveSettings({ reminder_offsets: offsets }, offsets.length ? "Reminder times saved" : "Reminders turned off");
+  const presetValues = REMINDER_CHOICES.map(([m]) => m);
+  const customOffsets = () => state.settings.reminder_offsets.filter((m) => !presetValues.includes(m));
+  const renderCustom = () => {
+    const list = customOffsets();
+    $("#custom-offsets").innerHTML = list.length
+      ? list.map((m) => `<span class="rem-chip">${esc(offsetLabel(m))}<button type="button" data-custom-remove="${m}" aria-label="Remove">×</button></span>`).join("")
+      : `<span class="muted small">None yet — e.g. 45 minutes or 2 hours before.</span>`;
+  };
+  renderCustom();
+  const saveOffsets = async (offsets) => {
+    const ok = await saveSettings({ reminder_offsets: offsets }, offsets.length ? "Reminder times saved" : "Reminders turned off");
+    if (!ok) return;
+    renderCustom();
+    $$("#offsets input").forEach((i) => (i.checked = state.settings.reminder_offsets.includes(Number(i.value))));
+  };
+  $("#offsets").addEventListener("change", (e) => {
+    const offsets = [...$$("#offsets input:checked").map((i) => Number(i.value)), ...customOffsets()];
+    if (offsets.length > MAX_REMINDERS) {
+      e.target.checked = false;
+      return toast(`Max ${MAX_REMINDERS} reminders`, "error");
+    }
+    saveOffsets(offsets);
+  });
+  $("#custom-offsets").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-custom-remove]");
+    if (b) saveOffsets(state.settings.reminder_offsets.filter((m) => m !== Number(b.dataset.customRemove)));
+  });
+  const adder = $('[data-adder="settings"]');
+  adder.addEventListener("click", (e) => {
+    if (!e.target.closest("[data-add]")) return;
+    const min = readAdder(adder, state.settings.reminder_offsets);
+    if (min !== null) saveOffsets([...state.settings.reminder_offsets, min]);
+  });
+  adder.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.matches("input")) {
+      e.preventDefault();
+      $("[data-add]", adder).click();
+    }
   });
   $("#digest-hour").addEventListener("change", (e) => saveSettings({ digest_hour: Number(e.target.value) }));
   $("#timezone").addEventListener("change", (e) => saveSettings({ timezone: e.target.value }).then(() => render()));

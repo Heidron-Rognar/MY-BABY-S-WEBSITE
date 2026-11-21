@@ -82,3 +82,46 @@ test("labels", () => {
   assert.equal(relativeLabel(72 * H, "Asia/Manila", NOW, NOW + 72 * H), "in 3 days");
   assert.equal(formatInZone(new Date(NOW), "Asia/Manila"), "Sat, Nov 21 · 12:00 PM");
 });
+
+import { normalizeOffsets, offsetLabel } from "../src/lib.js";
+
+test("custom offsets are cleaned", () => {
+  assert.deepEqual(normalizeOffsets([45, "120", 45, 99999, -1, 0, 7.4]), [120, 45, 7, 0]);
+  assert.deepEqual(normalizeOffsets("nope"), []);
+  assert.equal(normalizeOffsets([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).length, 8);
+});
+
+test("per-post reminder_offsets: null = defaults, [] = none", () => {
+  assert.equal(normalizePostInput({ caption: "x" }).value.reminder_offsets, null);
+  assert.deepEqual(normalizePostInput({ caption: "x", reminder_offsets: [] }).value.reminder_offsets, []);
+  assert.deepEqual(normalizePostInput({ caption: "x", reminder_offsets: [30, 90] }).value.reminder_offsets, [90, 30]);
+});
+
+test("image-only posts are allowed", () => {
+  assert.ok(normalizePostInput({ caption: "" }).error);
+  assert.ok(normalizePostInput({ caption: "", has_images: true }).value);
+});
+
+test("adding an earlier reminder after a later one was sent does not re-notify", () => {
+  const p = post(5); // 5 hours away
+  const sent = new Set([`1|360|${p.scheduled_at}`]); // "6 hours before" already sent
+  // user adds "1 day before" afterwards → must not fire; 45 min later still works
+  assert.deepEqual(computeDueReminders(p, [1440, 360, 45], sent, NOW).due, []);
+  const later = NOW + (5 * 60 - 45) * 60e3;
+  assert.deepEqual(computeDueReminders(p, [1440, 360, 45], sent, later).due, [45]);
+});
+
+test("custom minute reminders fire on time", () => {
+  const p = post(0.75); // 45 min away
+  assert.deepEqual(computeDueReminders(p, [45], new Set(), NOW).due, [45]);
+  assert.deepEqual(computeDueReminders(p, [30], new Set(), NOW).due, []);
+});
+
+test("offset labels", () => {
+  assert.equal(offsetLabel(0), "At posting time");
+  assert.equal(offsetLabel(45), "45 min before");
+  assert.equal(offsetLabel(60), "1 hour before");
+  assert.equal(offsetLabel(120), "2 hours before");
+  assert.equal(offsetLabel(90), "1 h 30 min before");
+  assert.equal(offsetLabel(2880), "2 days before");
+});
