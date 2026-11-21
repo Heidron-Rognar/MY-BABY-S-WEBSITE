@@ -15,9 +15,25 @@ const THEMES = [
   { id: "rose", name: "Rosé Light", desc: "The original soft pink look.", preview: "tp-rose" },
   { id: "rose-dark", name: "Rosé Night", desc: "Same look, always dark.", preview: "tp-rose-dark" },
   { id: "cyber", name: "Cyber", desc: "Black, white & signal yellow.", preview: "tp-cyber" },
+  { id: "matcha", name: "Matcha", desc: "Cream paper, serif type & matcha green. Cozy and bookish.", preview: "tp-matcha" },
 ];
-const THEME_BG = { rose: "#fff7f3", "rose-dark": "#1b1517", cyber: "#121316" };
-const CYBER_FONTS = "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap";
+const THEME_BG = { rose: "#fff7f3", "rose-dark": "#1b1517", cyber: "#121316", matcha: "#f3eee1" };
+// Extra fonts are only downloaded when their theme is picked (keep in sync with the snippet in index.html).
+const THEME_FONTS = {
+  cyber: "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap",
+  matcha:
+    "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..600&display=swap",
+};
+// Content-type colors per theme (default: PALETTE).
+const THEME_PALETTES = {
+  cyber: CYBER_PALETTE,
+  // Earthy tea-shop tones: matcha, terracotta, ochre, sage, plum, slate, moss, clay, hojicha, olive.
+  matcha: ["#6b8f47", "#c0674a", "#c49a3a", "#7f9f86", "#8a5a7a", "#5b7a99", "#4e6b3a", "#b77b7b", "#8b6b4a", "#9a9a4a"],
+};
+const THEME_CONFETTI = {
+  cyber: ["#f5c400", "#f5c400", "#f2f2f2", "#ffe27a", "#8d9096"],
+  matcha: ["#6b8f47", "#9cb86a", "#c5d8a4", "#f3eee1", "#e8b4b8", "#4e6b3a"],
+};
 
 function currentTheme() {
   return document.documentElement.dataset.theme || "auto";
@@ -30,11 +46,11 @@ function applyThemeChrome() {
     const dark = (m.getAttribute("media") || "").includes("dark");
     m.setAttribute("content", THEME_BG[t] || (dark ? THEME_BG["rose-dark"] : THEME_BG.rose));
   });
-  if (t === "cyber" && !$("#cyber-fonts")) {
+  if (THEME_FONTS[t] && !$(`#${t}-fonts`)) {
     const l = document.createElement("link");
     l.rel = "stylesheet";
-    l.id = "cyber-fonts";
-    l.href = CYBER_FONTS;
+    l.id = `${t}-fonts`;
+    l.href = THEME_FONTS[t];
     document.head.append(l);
   }
 }
@@ -211,7 +227,7 @@ function typeColor(type) {
   if (!type) return "#9c8a8f";
   const list = state.settings?.content_types || [];
   const i = list.findIndex((t) => t.toLowerCase() === type.toLowerCase());
-  const pal = currentTheme() === "cyber" ? CYBER_PALETTE : PALETTE;
+  const pal = THEME_PALETTES[currentTheme()] || PALETTE;
   if (i >= 0) return pal[i % pal.length];
   let h = 0;
   for (const c of type) h = (h * 31 + c.charCodeAt(0)) >>> 0;
@@ -663,10 +679,7 @@ function confetti(x = window.innerWidth / 2, y = window.innerHeight / 2) {
   (editor.open ? editor : document.body).append(canvas);
   const ctx = canvas.getContext("2d");
   ctx.scale(dpr, dpr);
-  const colors =
-    currentTheme() === "cyber"
-      ? ["#f5c400", "#f5c400", "#f2f2f2", "#ffe27a", "#8d9096"]
-      : ["#e2557c", "#f08a5d", "#ffd166", "#7c5cff", "#1fa6a0", "#3b82f6"];
+  const colors = THEME_CONFETTI[currentTheme()] || ["#e2557c", "#f08a5d", "#ffd166", "#7c5cff", "#1fa6a0", "#3b82f6"];
   const pieces = Array.from({ length: 70 }, () => {
     const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.9;
     const speed = 5 + Math.random() * 7;
