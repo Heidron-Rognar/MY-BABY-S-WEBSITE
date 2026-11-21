@@ -15,6 +15,7 @@ One place for all your social media captions: no more Google Docs, random notes,
   - a **"Did you post it?"** nudge if you forgot to mark it as posted
   - tap **✅ Mark as posted** right in Telegram
   - send your bot `/today`, `/week`, or `/next` any time
+- **Make it yours** in Settings → Theme, including **Beach**: crystal-clear turquoise water, pearl seashells, warm sand, and a seaside caption-writing desk. Themes are saved per device.
 - Works great on your phone. You can "Add to Home Screen" so it feels like an app.
 - Protected by a password, and you can download a backup (JSON or CSV) any time.
 

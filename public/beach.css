@@ -1,0 +1,122 @@
+/* Beach is opt-in. All scenery is static, local, and outside editable text. */
+.beach-only { display: none !important; }
+.tp-beach { background: #b8eee5 url('/beach-water.jpg') center / cover; border: 1px solid #b4d8cf; }
+.tp-beach i { background: #175c61; }
+.tp-beach i:nth-child(2) { background: #175c61; opacity: .5; }
+.tp-beach em { background: url('/beach-shell.svg') center / contain no-repeat; width: 36px; height: 34px; }
+
+:root[data-theme="beach"] {
+  --bg: #e7f5f1;
+  --bg-2: #c8eee6;
+  --surface: #fffdf7;
+  --surface-2: #eef7f3;
+  --text: #183e43;
+  --muted: #506e70;
+  --line: #c5dcd6;
+  --accent: #176e73;
+  --accent-2: #155c65;
+  --accent-soft: #d8efea;
+  --ok: #2d6c53;
+  --ok-soft: #e0f0e5;
+  --warn: #825b29;
+  --warn-soft: #f7ecd8;
+  --danger: #a43f42;
+  --shadow: 0 2px 3px #175c6106, 0 8px 24px #175c6110;
+  --shadow-lg: 0 24px 70px #174e4940;
+  --radius: 20px;
+  --radius-sm: 10px;
+  --shore-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  color-scheme: light;
+}
+[data-theme="beach"] body {
+  background: linear-gradient(#e7f5f112, #e7f5f150), url('/beach-water.jpg') center / cover no-repeat, var(--bg);
+  background-attachment: fixed;
+}
+[data-theme="beach"] ::selection { background: #c5e5dc; color: #183e43; }
+[data-theme="beach"] :is(h1, h2, h3, .brand, .card-title, .title-input) {
+  font-family: var(--shore-display); letter-spacing: -.025em; font-weight: 500;
+}
+[data-theme="beach"] :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+[data-theme="beach"] .topbar { background: #f5fcf8ee; border-bottom: 1px solid #b4d8cf; }
+[data-theme="beach"] .brand { font-size: 23px; }
+[data-theme="beach"] :is(.brand-mark, .login-card .logo-badge) {
+  font-size: 0; background: #f6ecdf url('/beach-shell.svg') center / 80% no-repeat; border: 1px solid #e4d4bf; border-radius: 50%;
+}
+[data-theme="beach"] .search input { background: var(--surface); }
+[data-theme="beach"] .tabs { margin-top: 8px; }
+[data-theme="beach"] .tabs a { color: var(--text); background: #fffdf7e8; }
+[data-theme="beach"] .tabs a.active { background: var(--accent); color: var(--surface); }
+[data-theme="beach"] .tabs a.active .count { background: #ffffff26; color: var(--surface); }
+[data-theme="beach"] .btn-primary { background: var(--accent); color: var(--surface); box-shadow: 0 4px 12px #176e7326; }
+[data-theme="beach"] .btn-primary:hover { background: var(--accent-2); }
+[data-theme="beach"] .chip { background: var(--surface); }
+/* Keep selected labels readable for every content-type color. */
+[data-theme="beach"] .chip[aria-pressed="true"],
+[data-theme="beach"] .chip[aria-checked="true"] {
+  background: var(--chip-color, var(--accent)); border-color: var(--chip-color, var(--accent)); color: var(--surface);
+}
+[data-theme="beach"] .chip[aria-pressed="true"] .dot,
+[data-theme="beach"] .chip[aria-checked="true"] .dot { background: var(--surface); }
+[data-theme="beach"] .day-head { padding: 5px 12px; border-radius: 12px; background: #fffdf7f5; width: fit-content; max-width: 100%; flex-wrap: wrap; }
+[data-theme="beach"] .day-head h3 { font-size: 21px; }
+[data-theme="beach"] .card { border: 1px solid #c5dcd6; grid-template-columns: 5px 1fr; }
+[data-theme="beach"] .card-title { font-size: 21px; }
+[data-theme="beach"] .card-caption { line-height: 1.75; }
+[data-theme="beach"] .status-idea { background: #f8e7de; color: #884e3d; }
+[data-theme="beach"] :is(.panel, .cal, .empty-state) { background: var(--surface); border: 1px solid var(--line); }
+[data-theme="beach"] .empty-state { border-radius: var(--radius); }
+[data-theme="beach"] .empty-state .big { font-size: 0; width: 56px; height: 52px; margin: 0 auto 12px; background: url('/beach-shell.svg') center / contain no-repeat; }
+[data-theme="beach"] .panel h2 { font-size: 25px; }
+[data-theme="beach"] .cal-cell.today .cal-num { background: var(--accent); color: var(--surface); }
+[data-theme="beach"] .cal-cell.selected { background: var(--accent-soft); }
+[data-theme="beach"] .theme-card[aria-checked="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* A pearl-paper postcard on the shoreline, not text laid over busy water. */
+[data-theme="beach"] .daily-inspiration {
+  --daily-ink: #183e43; --daily-muted: #506e70;
+  background: linear-gradient(145deg, #fffdf7, #f2f9f4); border: 1px solid #b4d8cf;
+  border-radius: 60px 20px 60px 20px; border-bottom: 4px solid #e8d7c1; padding-bottom: 25px;
+}
+[data-theme="beach"] .daily-inspiration h2 { font: italic 500 clamp(27px, 4vw, 36px)/1.2 var(--shore-display); }
+[data-theme="beach"] .daily-label { color: var(--accent); }
+[data-theme="beach"] .daily-ornament { font-size: 0; width: 132px; height: 34px; justify-content: space-between; background: url('/beach-shell.svg') center / 36px 34px no-repeat; }
+[data-theme="beach"] .daily-ornament::before,
+[data-theme="beach"] .daily-ornament::after { width: 35px; background: #a5775e; }
+[data-theme="beach"] .daily-reading p { line-height: 1.85; }
+
+[data-theme="beach"] .editor { background: var(--surface); border: 1px solid var(--line); }
+[data-theme="beach"] .editor::backdrop { background: #123e4666; }
+[data-theme="beach"] .editor-head { background: var(--surface-2); }
+[data-theme="beach"] .editor-head h2 { font-size: 22px; }
+[data-theme="beach"] .title-input { font-size: 26px; }
+[data-theme="beach"] .caption-wrap { min-width: 0; border: 1px solid #dfcdb7; border-radius: 18px; background: #fffefa; }
+[data-theme="beach"] .beach-letter-head {
+  display: grid !important; gap: 6px; padding: 22px 70px 12px 20px; color: var(--accent);
+  background: url('/beach-shell.svg') right 18px top 18px / 39px 37px no-repeat;
+}
+[data-theme="beach"] .beach-letter-head small { font-size: 9px; letter-spacing: .16em; font-weight: 700; }
+[data-theme="beach"] .beach-letter-head span { font: italic 24px/1.25 var(--shore-display); }
+[data-theme="beach"] .caption-wrap textarea {
+  display: block; border: 0; border-radius: 0; background: transparent; padding: 12px 20px 20px;
+  font-size: 16px; line-height: 1.8; min-height: 220px; box-shadow: none;
+}
+[data-theme="beach"] .caption-wrap textarea:focus-visible { outline-offset: -5px; }
+[data-theme="beach"] .caption-tools { margin: 0 16px; padding: 10px 0; border-top: 1px solid #e9dfd0; flex-wrap: wrap; }
+[data-theme="beach"] .warnings:not(:empty) { padding: 0 16px 12px; }
+[data-theme="beach"] .notes textarea { background: var(--surface-2); font-size: 16px; }
+[data-theme="beach"] .fab { background: var(--accent); box-shadow: 0 6px 22px #176e7333; }
+[data-theme="beach"] .toast { background: var(--accent-2); color: var(--surface); }
+[data-theme="beach"] .toast.error { background: var(--danger); }
+[data-theme="beach"] .login-card { background: var(--surface); border: 1px solid #dfcdb7; border-radius: 42px 18px 42px 18px; }
+[data-theme="beach"] .login-card h1 { font-size: 34px; }
+[data-theme="beach"] .beach-login-kicker { display: block !important; color: var(--accent); font-size: 10px; letter-spacing: .14em; font-weight: 700; text-transform: uppercase; margin-top: 18px; }
+
+@media (max-width: 640px) {
+  [data-theme="beach"] .brand { font-size: 21px; }
+  [data-theme="beach"] .daily-inspiration { border-radius: 34px 16px 34px 16px; padding-inline: 20px; }
+  [data-theme="beach"] .editor { border: 0; }
+  [data-theme="beach"] .beach-letter-head { padding-left: 16px; }
+  [data-theme="beach"] .caption-wrap textarea { padding-inline: 16px; }
+}
