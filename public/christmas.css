@@ -59,21 +59,7 @@
 [data-theme="christmas"] .tabs a.active { background: var(--forest); color: var(--surface); }
 [data-theme="christmas"] .tabs a.active .count { background: #fffdf62b; color: var(--surface); }
 
-/* A festive greeting card, with evergreen sprigs and hanging baubles. */
-[data-theme="christmas"] .xm-greeting {
-  position: relative; display: grid !important; justify-items: center; text-align: center;
-  gap: 12px; padding: 30px 110px 25px; margin: 12px 0 20px;
-  background: url("/christmas-garland.svg") center / cover no-repeat, var(--forest);
-  border: 1px solid var(--forest); border-radius: 12px; color: var(--surface);
-  outline: 1px solid #d9b86e66; outline-offset: -7px;
-}
 [data-theme="christmas"] .xm-kicker { font-size: 10px; font-weight: 800; letter-spacing: 0.18em; }
-[data-theme="christmas"] .xm-greeting .xm-kicker { color: #e7cb8c; }
-[data-theme="christmas"] .xm-greeting-title {
-  font: italic 500 clamp(30px, 4.5vw, 43px)/1.16 var(--holiday-display); letter-spacing: -0.03em;
-}
-[data-theme="christmas"] .xm-greeting-note { font-size: 12px; color: #d7e4d3; }
-[data-theme="christmas"] .xm-greeting-star { font-size: 23px; line-height: 1; color: var(--gold); }
 [data-theme="christmas"] .chip { background: var(--surface); border-radius: 8px; }
 /* Selected-state fill must win over the pale unselected background. */
 [data-theme="christmas"] .chip[aria-pressed="true"],
@@ -155,16 +141,6 @@
 
 @media (max-width: 640px) {
   [data-theme="christmas"] .brand { font-size: 19px; }
-  [data-theme="christmas"] .xm-greeting {
-    padding: 25px 34px 22px;
-    /* Keep both decorated edges visible instead of cropping them off on phones. */
-    background-image: url("/christmas-garland.svg"), url("/christmas-garland.svg");
-    background-position: left top, right top;
-    background-size: 640px auto;
-    background-repeat: no-repeat;
-  }
-  [data-theme="christmas"] .xm-greeting-note { font-size: 11px; }
-  [data-theme="christmas"] .xm-greeting .xm-kicker { font-size: 9px; }
   [data-theme="christmas"] .editor { border: 0; }
   [data-theme="christmas"] .xm-letter-head { padding: 20px 65px 0 18px; }
   [data-theme="christmas"] .xm-letter-title { font-size: 23px; }

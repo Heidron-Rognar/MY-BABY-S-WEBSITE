@@ -68,13 +68,7 @@
 [data-theme="bookish"] .tabs a.active { background: transparent; color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
 [data-theme="bookish"] .count { border-radius: 2px; background: var(--surface-2); color: var(--muted); }
 [data-theme="bookish"] .tabs a.active .count { background: var(--accent); color: var(--surface); }
-[data-theme="bookish"] .bk-frontispiece {
-  display: grid !important; justify-items: center; gap: 5px; text-align: center;
-  padding: 22px 8px 16px; margin-bottom: 18px; border-bottom: 3px double var(--line);
-}
 [data-theme="bookish"] .bk-edition { font-size: 10px; letter-spacing: 0.2em; color: var(--muted); }
-[data-theme="bookish"] .bk-motto { font: italic 28px/1.2 var(--book-display); color: var(--accent); }
-[data-theme="bookish"] .bk-ornament { font: 28px/1 var(--book-display); color: #9b7b45; }
 [data-theme="bookish"] .chip { border-radius: 3px; background: var(--surface); font-size: 13px; }
 /* The paper background above must not override the selected chip fill. */
 [data-theme="bookish"] .chip[aria-pressed="true"],
@@ -175,8 +169,6 @@
 
 @media (max-width: 640px) {
   [data-theme="bookish"] .brand { font-size: 22px; }
-  [data-theme="bookish"] .bk-frontispiece { padding-top: 16px; }
-  [data-theme="bookish"] .bk-motto { font-size: 24px; }
   [data-theme="bookish"] .editor { border: 0; border-radius: 0; }
   [data-theme="bookish"] .bk-manuscript-head { padding: 28px 22px 0; }
   [data-theme="bookish"] .bk-manuscript-head .bk-edition { font-size: 9px; letter-spacing: 0.12em; }

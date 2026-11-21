@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/bookish.css" />
     <link rel="stylesheet" href="/christmas.css" />
+    <link rel="stylesheet" href="/daily-inspiration.css" />
     <script>
       // Apply the theme saved on this device before the page paints (no flash).
       try {
@@ -85,20 +86,25 @@
 
       <div class="cy-only cy-strip" aria-hidden="true"><div class="cy-strip-track"><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span></div></div>
 
-      <div class="mt-only mt-rule" aria-hidden="true"><span>❦</span></div>
-
-      <div class="bk-only bk-frontispiece" aria-hidden="true">
-        <span class="bk-edition">THE CAPTION COLLECTION</span>
-        <span class="bk-motto">A place for every unwritten story.</span>
-        <span class="bk-ornament">❧</span>
-      </div>
-
-      <div class="xm-only xm-greeting" aria-hidden="true">
-        <span class="xm-kicker">THE HOLIDAY STUDIO</span>
-        <span class="xm-greeting-title">A little merry,<br />a little magic.</span>
-        <span class="xm-greeting-note">Make room for moments worth sharing.</span>
-        <span class="xm-greeting-star">✧</span>
-      </div>
+      <section id="daily-inspiration" class="daily-inspiration" aria-labelledby="daily-title" hidden>
+        <div class="daily-meta"><span id="daily-salutation"></span><time id="daily-date"></time></div>
+        <span id="daily-label" class="daily-label"></span>
+        <h2 id="daily-title"></h2>
+        <span id="daily-ornament" class="daily-ornament" aria-hidden="true"></span>
+        <p id="daily-status" class="daily-status" role="status"></p>
+        <button id="daily-retry" class="link-btn daily-retry" type="button" hidden>Try again</button>
+        <figure id="daily-reading" class="daily-reading" hidden>
+          <blockquote><p id="daily-verse-text"></p></blockquote>
+          <figcaption><cite id="daily-verse-reference"></cite><span class="daily-version"> · ESV</span></figcaption>
+        </figure>
+        <span class="daily-footnote">Verse of the day · A fresh word each day</span>
+        <a class="daily-source" href="https://www.esv.org/" target="_blank" rel="noopener noreferrer">Read the Bible at ESV.org ↗</a>
+        <details id="daily-copyright" class="daily-copyright" hidden>
+          <summary>ESV copyright &amp; permissions</summary>
+          <p>Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated into any other language.</p>
+          <p>Users may not copy or download more than 500 verses of the ESV Bible or more than one half of any book of the ESV Bible.</p>
+        </details>
+      </section>
 
       <div id="type-filter" class="filter-row" aria-label="Filter by content type"></div>
 
