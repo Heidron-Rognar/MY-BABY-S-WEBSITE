@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Caption Studio</title>
+    <meta name="theme-color" content="#fff7f3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1b1517" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <!-- ============ LOGIN ============ -->
+    <main id="login" class="login" hidden>
+      <form id="login-form" class="login-card" autocomplete="on">
+        <div class="logo-badge" aria-hidden="true">✍️</div>
+        <h1>Caption Studio</h1>
+        <p class="muted">All your captions, dates and reminders in one place.</p>
+        <label class="field">
+          <span>Password</span>
+          <input id="login-password" type="password" name="password" autocomplete="current-password" required autofocus />
+        </label>
+        <p id="login-error" class="form-error" role="alert"></p>
+        <button class="btn btn-primary btn-block" type="submit">Open my studio</button>
+      </form>
+    </main>
+
+    <!-- ============ APP ============ -->
+    <div id="app" class="app" hidden>
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">✍️</span>
+          <span id="brand-name">Caption Studio</span>
+        </div>
+        <div class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
+          <input id="search" type="search" placeholder="Search captions, hashtags, notes…" aria-label="Search" />
+        </div>
+        <a href="#settings" class="icon-btn" id="settings-link" aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="fill:none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </a>
+      </header>
+
+      <nav class="tabs" aria-label="Views">
+        <a href="#upcoming" data-view="upcoming">Upcoming <span class="count" data-count="upcoming"></span></a>
+        <a href="#calendar" data-view="calendar">Calendar</a>
+        <a href="#ideas" data-view="ideas">Ideas &amp; drafts <span class="count" data-count="ideas"></span></a>
+        <a href="#posted" data-view="posted">Posted <span class="count" data-count="posted"></span></a>
+      </nav>
+
+      <div id="type-filter" class="filter-row" aria-label="Filter by content type"></div>
+
+      <main id="view" class="view" tabindex="-1"></main>
+
+      <button id="fab" class="fab" type="button" aria-label="New caption">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
+        <span>New caption</span>
+      </button>
+    </div>
+
+    <!-- ============ EDITOR ============ -->
+    <dialog id="editor" class="editor" aria-labelledby="editor-title">
+      <form id="editor-form" method="dialog" novalidate>
+        <header class="editor-head">
+          <button type="button" class="icon-btn" data-action="close" aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
+          </button>
+          <h2 id="editor-title">New caption</h2>
+          <button type="submit" class="btn btn-primary" id="save-btn">Save</button>
+        </header>
+
+        <div class="editor-body">
+          <input id="f-title" class="title-input" type="text" maxlength="200" placeholder="Short name (optional) — e.g. “Beach day reel”" />
+
+          <div class="caption-wrap">
+            <textarea id="f-caption" rows="8" maxlength="10000" placeholder="Write your caption here… ✨"></textarea>
+            <div class="caption-tools">
+              <span id="caption-stats" class="muted small"></span>
+              <button type="button" class="btn btn-ghost btn-sm" data-action="copy">Copy caption</button>
+            </div>
+            <div id="caption-warnings" class="warnings"></div>
+          </div>
+
+          <section class="field-group">
+            <div class="group-label">
+              <span>📅 Posting date</span>
+              <button type="button" class="link-btn" data-action="clear-date">No date yet</button>
+            </div>
+            <div class="date-row">
+              <input id="f-date" type="date" aria-label="Date" />
+              <input id="f-time" type="time" aria-label="Time" step="300" />
+            </div>
+            <div class="quick-dates">
+              <button type="button" class="chip" data-quick="today">Today</button>
+              <button type="button" class="chip" data-quick="tomorrow">Tomorrow</button>
+              <button type="button" class="chip" data-quick="weekend">This weekend</button>
+              <button type="button" class="chip" data-quick="nextweek">Next week</button>
+            </div>
+            <p id="reminder-preview" class="muted small"></p>
+          </section>
+
+          <section class="field-group">
+            <div class="group-label"><span>🎬 Content type</span></div>
+            <div id="f-types" class="chips" role="radiogroup" aria-label="Content type"></div>
+          </section>
+
+          <section class="field-group">
+            <div class="group-label"><span>📱 Platforms</span></div>
+            <div id="f-platforms" class="chips" aria-label="Platforms"></div>
+          </section>
+
+          <section class="field-group">
+            <div class="group-label"><span>🚦 Status</span></div>
+            <div id="f-status" class="segmented" role="radiogroup" aria-label="Status"></div>
+          </section>
+
+          <details class="field-group notes" id="notes-details">
+            <summary>📝 Notes, shot list, links</summary>
+            <textarea id="f-notes" rows="4" maxlength="5000" placeholder="Music to use, outfit, location, collab tags, drive link…"></textarea>
+          </details>
+        </div>
+
+        <footer class="editor-foot">
+          <button type="button" class="btn btn-danger-ghost" data-action="delete" id="delete-btn">Delete</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" data-action="duplicate" id="duplicate-btn">Duplicate</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

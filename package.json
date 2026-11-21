@@ -1,0 +1,15 @@
+{
+  "name": "caption-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Centralized caption planner with Telegram posting reminders. Runs free on Cloudflare Workers + D1.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.50.0"
+  }
+}
