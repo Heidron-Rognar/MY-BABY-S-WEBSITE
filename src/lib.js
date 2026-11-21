@@ -6,10 +6,12 @@ export const MAX_REMINDERS = 8;
 export const MAX_IMAGES_PER_POST = 10;
 export const MAX_IMAGE_BYTES = 1_400_000; // stored base64 in D1 (row limit ~2 MB)
 export const MAX_THUMB_BYTES = 150_000;
+// Bump this when the default content types change: existing sites get the new list once.
+export const CONTENT_TYPES_VERSION = 2;
 
 export const DEFAULT_SETTINGS = {
   app_name: "Caption Studio",
-  content_types: ["Reel", "Carousel", "Photo", "Story", "Video", "Live", "Text post"],
+  content_types: ["Showcase", "Relatable", "Trend", "Motivational", "Feedbacks", "Educational", "Personal/Brand", "Mini Quiz"],
   platforms: ["Instagram", "TikTok", "Facebook", "YouTube", "Threads", "X"],
   reminder_offsets: [1440, 60, 0], // minutes before the post: 1 day, 1 hour, at post time
   digest_hour: 8, // daily "today's posts" message at 8 AM local time; -1 = off

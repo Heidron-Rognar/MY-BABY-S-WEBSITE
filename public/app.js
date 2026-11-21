@@ -570,7 +570,7 @@ $("#view").addEventListener("click", async (e) => {
     const card = act.closest(".card");
     const post = card ? state.posts.find((p) => p.id === Number(card.dataset.id)) : null;
     if (act.dataset.act === "copy" && post) return copyText(post.caption);
-    if (act.dataset.act === "posted" && post) return markPosted(post);
+    if (act.dataset.act === "posted" && post) return markPosted(post, act);
     if (act.dataset.act === "new") return openEditor(null);
     if (act.dataset.act === "new-on-day") return openEditor(null, { day: act.dataset.day });
   }
@@ -604,9 +604,76 @@ $("#view").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.classList.contains("card")) e.target.click();
 });
 
-async function markPosted(post) {
+/* ---------- confetti 🎉 (tiny, no library) ---------- */
+
+function confetti(x = window.innerWidth / 2, y = window.innerHeight / 2) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const canvas = document.createElement("canvas");
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.className = "confetti";
+  // Inside an open <dialog> the canvas must live in the dialog to appear above it.
+  (editor.open ? editor : document.body).append(canvas);
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  const colors = ["#e2557c", "#f08a5d", "#ffd166", "#7c5cff", "#1fa6a0", "#3b82f6"];
+  const pieces = Array.from({ length: 70 }, () => {
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.9;
+    const speed = 5 + Math.random() * 7;
+    return {
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      w: 5 + Math.random() * 5,
+      h: 7 + Math.random() * 7,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.35,
+      color: colors[(Math.random() * colors.length) | 0],
+      round: Math.random() < 0.3,
+    };
+  });
+  const start = performance.now();
+  const DURATION = 1500;
+  (function frame(now) {
+    const t = now - start;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = Math.max(0, 1 - Math.max(0, t - DURATION * 0.6) / (DURATION * 0.4));
+    for (const p of pieces) {
+      p.vy += 0.28; // gravity
+      p.vx *= 0.985;
+      p.vy *= 0.985;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      if (p.round) {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * (0.4 + 0.6 * Math.abs(Math.cos(p.rot * 2))));
+      }
+      ctx.restore();
+    }
+    if (t < DURATION) requestAnimationFrame(frame);
+    else canvas.remove();
+  })(start);
+}
+
+function confettiFrom(el) {
+  if (!el?.getBoundingClientRect) return confetti();
+  const r = el.getBoundingClientRect();
+  confetti(r.left + r.width / 2, r.top + r.height / 2);
+}
+
+async function markPosted(post, fromEl) {
   try {
     const { post: updated } = await api(`/api/posts/${post.id}`, { method: "PATCH", body: { status: "posted" } });
+    confettiFrom(fromEl);
     upsertLocal(updated);
     render();
     toast("Marked as posted 🎉");
@@ -926,9 +993,11 @@ form.addEventListener("submit", async (e) => {
   const wasEditing = Boolean(state.editing);
   let saved = null;
   try {
+    const justPosted = payload.status === "posted" && state.editing?.status !== "posted";
     const res = wasEditing
       ? await api(`/api/posts/${state.editing.id}`, { method: "PUT", body: payload })
       : await api("/api/posts", { method: "POST", body: payload });
+    const btnRect = (e.submitter || buttons[0]).getBoundingClientRect();
     saved = res.post;
     state.editing = saved; // from now on, retries update this post instead of creating a new one
     upsertLocal(saved);
@@ -937,7 +1006,10 @@ form.addEventListener("submit", async (e) => {
     upsertLocal(fresh);
     closeEditor(true);
     render();
-    toast(wasEditing ? "Saved ✨" : fresh.scheduled_at ? "Scheduled 🗓️" : "Saved to ideas 💡");
+    if (justPosted) {
+      confetti(btnRect.left + btnRect.width / 2, btnRect.top + btnRect.height / 2);
+      toast("Posted — nice work! 🎉");
+    } else toast(wasEditing ? "Saved ✨" : fresh.scheduled_at ? "Scheduled 🗓️" : "Saved to ideas 💡");
   } catch (err) {
     toast(err.message, "error");
     if (saved) {

@@ -23,6 +23,7 @@ import {
   MAX_IMAGES_PER_POST,
   MAX_IMAGE_BYTES,
   MAX_THUMB_BYTES,
+  CONTENT_TYPES_VERSION,
 } from "./lib.js";
 
 const enc = new TextEncoder();
@@ -84,6 +85,15 @@ function ensureSchema(env) {
         const cols = new Set(results.map((c) => c.name));
         if (!cols.has("reminder_offsets")) {
           await env.DB.prepare("ALTER TABLE posts ADD COLUMN reminder_offsets TEXT").run();
+        }
+        // One-time switch to the new default content types (later edits in Settings are kept).
+        const ver = await env.DB.prepare("SELECT value FROM settings WHERE key = 'content_types_version'").first();
+        if (!ver || Number(JSON.parse(ver.value)) < CONTENT_TYPES_VERSION) {
+          const upsert = "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value";
+          await env.DB.batch([
+            env.DB.prepare(upsert).bind("content_types", JSON.stringify(DEFAULT_SETTINGS.content_types)),
+            env.DB.prepare(upsert).bind("content_types_version", JSON.stringify(CONTENT_TYPES_VERSION)),
+          ]);
         }
       })
       .catch((err) => {
@@ -958,7 +968,7 @@ async function handleApi(request, env, url) {
 
 function publicSettings(s) {
   // Everything except internal bookkeeping.
-  const { last_digest, webhook_url, ...rest } = s;
+  const { last_digest, webhook_url, content_types_version, ...rest } = s;
   return rest;
 }
 

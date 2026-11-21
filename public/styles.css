@@ -414,3 +414,5 @@ svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
 
 .meter { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--line); }
 .meter span { display: block; height: 100%; border-radius: 999px; min-width: 4px; transition: width 0.3s ease; }
+
+.confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1000; }

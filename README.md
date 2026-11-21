@@ -3,7 +3,7 @@
 One place for all your social media captions: no more Google Docs, random notes, or screenshots.
 
 - **Write captions** with a live character, word, and hashtag counter, plus warnings when a caption is too long for Instagram, TikTok, X, Threads, etc.
-- **Schedule them** with a date and time, a **content type** (Reel, Carousel, Photo, Story…), and **platforms**.
+- **Schedule them** with a date and time, a **content type** (Showcase, Relatable, Trend, Motivational, Feedbacks, Educational, Personal/Brand, Mini Quiz; editable in Settings), and **platforms**.
 - **Attach photos** (up to 10 per post). Paste, drag & drop or pick from your gallery. They're resized in your browser to max 2048 px so they fit the free database, and sent to you on Telegram at posting time. Videos aren't supported (too big for free storage), so paste a Drive link in the notes instead.
 - **See everything**: an Upcoming list, a month **Calendar**, **Ideas & drafts** (captions with no date yet), and a **Posted** archive you can search and reuse.
 - **Get Telegram reminders**:
