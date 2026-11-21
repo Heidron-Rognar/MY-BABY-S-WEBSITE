@@ -878,3 +878,45 @@ svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
     linear-gradient(to right, transparent 30px, rgba(192, 103, 74, 0.35) 30px, rgba(192, 103, 74, 0.35) 31px, transparent 31px),
     repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--lh) - 1px), rgba(107, 143, 71, 0.22) calc(var(--lh) - 1px), rgba(107, 143, 71, 0.22) var(--lh)); }
 }
+
+/* ================================================================== */
+/* Posted view: archive toolbar, per-card checkboxes, bulk action bar   */
+/* ================================================================== */
+.posted-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+.posted-bar .spacer, .bulk-bar .spacer { flex: 1; }
+.card-check {
+  flex: none; width: 22px; height: 22px; border-radius: 7px; border: 2px solid color-mix(in srgb, var(--muted) 70%, transparent);
+  background: var(--surface); cursor: pointer; padding: 0; display: grid; place-items: center; margin-right: 2px;
+}
+.card-check:hover { border-color: var(--accent); }
+.card-check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.card-check[aria-checked="true"]::after {
+  content: ""; width: 10px; height: 6px; border: solid #fff; border-width: 0 0 2.5px 2.5px; transform: translate(0, -1px) rotate(-45deg);
+}
+.card.selected { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+.bulk-bar {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 30;
+  width: min(560px, calc(100vw - 24px)); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px 10px 18px; border-radius: 999px; background: var(--surface); color: var(--text);
+  box-shadow: var(--shadow-lg); border: 1px solid var(--line); animation: bulk-in 0.18s ease;
+}
+@keyframes bulk-in { from { transform: translate(-50%, 12px); opacity: 0; } }
+.bulk-bar b { font-size: 14px; }
+#view:has(.bulk-bar:not([hidden])) { padding-bottom: 130px; }
+@media (max-width: 640px) {
+  .bulk-bar { border-radius: 18px; padding: 12px 14px; row-gap: 10px; }
+  .bulk-bar .spacer { flex-basis: 100%; height: 0; }
+  .bulk-bar .btn { flex: 1; justify-content: center; padding-block: 9px; }
+}
+
+/* theme touches */
+[data-theme="cyber"] .card-check { border-radius: 0; background: transparent; border-color: var(--muted); }
+[data-theme="cyber"] .card-check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+[data-theme="cyber"] .card-check[aria-checked="true"]::after { border-color: #111; }
+[data-theme="cyber"] .card.selected { box-shadow: none; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+[data-theme="cyber"] .bulk-bar { border-radius: 0; background: #0f1012; border-color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
+[data-theme="matcha"] .card-check { border-radius: 4px; background: #fffdf6; }
+[data-theme="matcha"] .card-check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+[data-theme="matcha"] .card-check[aria-checked="true"]::after { border-color: #fbf8ef; }
+[data-theme="matcha"] .card.selected { box-shadow: 0 0 0 2px var(--accent), 0 3px 0 -1px var(--surface), 0 3px 0 0 var(--line), 0 6px 0 -1px var(--surface), 0 6px 0 0 var(--line); }
+[data-theme="matcha"] .bulk-bar { border-radius: 10px; font-style: italic; }

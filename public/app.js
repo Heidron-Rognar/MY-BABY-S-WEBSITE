@@ -144,6 +144,8 @@ const state = {
   calSelected: null,
   editing: null, // post being edited (null = new)
   editorSnapshot: "",
+  postedTab: "posted", // "posted" | "archived" (inside the Posted view)
+  selected: new Set(), // ids of ticked cards in the Posted view
 };
 
 /* ------------------------------------------------------------------ */
@@ -363,14 +365,17 @@ function route() {
     render();
     return;
   }
-  state.view = ["upcoming", "calendar", "ideas", "posted", "settings"].includes(hash) ? hash : "upcoming";
+  const nextView = ["upcoming", "calendar", "ideas", "posted", "settings"].includes(hash) ? hash : "upcoming";
+  if (nextView !== state.view) state.selected.clear();
+  state.view = nextView;
   render();
 }
 
 function render() {
   $$(".tabs a").forEach((a) => a.classList.toggle("active", a.dataset.view === state.view));
   $("#settings-link").classList.toggle("active", state.view === "settings");
-  $("#fab").hidden = state.view === "settings";
+  if (state.view !== "posted") state.selected.clear();
+  $("#fab").hidden = state.view === "settings" || state.selected.size > 0;
   renderTypeFilter();
   const view = $("#view");
   if (state.view === "settings") return renderSettings(view);
@@ -383,7 +388,7 @@ function render() {
 function updateCounts() {
   const upcoming = state.posts.filter((p) => p.scheduled_at && p.status !== "posted").length;
   const ideas = state.posts.filter((p) => !p.scheduled_at && p.status !== "posted").length;
-  const posted = state.posts.filter((p) => p.status === "posted").length;
+  const posted = state.posts.filter((p) => p.status === "posted" && !p.archived_at).length;
   const set = (k, n) => ($(`[data-count="${k}"]`).textContent = n ? String(n) : "");
   set("upcoming", upcoming);
   set("ideas", ideas);
@@ -396,7 +401,8 @@ function renderTypeFilter() {
     row.innerHTML = "";
     return;
   }
-  const used = new Set(state.posts.map((p) => p.content_type).filter(Boolean));
+  const inArchive = state.view === "posted" && state.postedTab === "archived";
+  const used = new Set(state.posts.filter((p) => !p.archived_at || inArchive).map((p) => p.content_type).filter(Boolean));
   const types = [...(state.settings?.content_types || []).filter((t) => used.has(t)), ...[...used].filter((t) => !(state.settings?.content_types || []).includes(t))];
   if (types.length < 2 && !state.typeFilter) {
     row.innerHTML = "";
@@ -436,17 +442,22 @@ $("#search").addEventListener("input", (e) => {
 const ICON_COPY = `<svg viewBox="0 0 24 24"><path d="M8 3h11a2 2 0 0 1 2 2v11h-2V5H8V3Zm-3 4h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Zm0 2v10h10V9H5Z"/></svg>`;
 const ICON_CHECK = `<svg viewBox="0 0 24 24"><path d="m9.5 16.2-4.2-4.2-1.4 1.4 5.6 5.6 11-11-1.4-1.4z"/></svg>`;
 
-function cardHTML(p, { showDate = false } = {}) {
+function cardHTML(p, { showDate = false, selectable = false } = {}) {
   const color = typeColor(p.content_type);
   const d = p.scheduled_at ? new Date(p.scheduled_at) : null;
   const when = d ? (showDate ? `${fmtDate(d)} · ${fmtTime(d)}` : fmtTime(d)) : "";
   const overdue = d && d < new Date() && p.status !== "posted";
   const caption = p.caption.trim();
   return `
-  <article class="card" tabindex="0" data-id="${p.id}" style="--type-color:${color}">
+  <article class="card${selectable && state.selected.has(p.id) ? " selected" : ""}" tabindex="0" data-id="${p.id}" style="--type-color:${color}">
     <div class="card-bar"></div>
     <div class="card-main">
       <div class="card-top">
+        ${
+          selectable
+            ? `<button type="button" class="card-check" data-act="select" role="checkbox" aria-checked="${state.selected.has(p.id)}" aria-label="Select this post"></button>`
+            : ""
+        }
         ${when ? `<span class="card-time">${esc(when)}</span>` : ""}
         ${d && p.status !== "posted" ? `<span class="muted small" ${overdue ? 'style="color:var(--danger)"' : ""}>${esc(relativeFromNow(d))}</span>` : ""}
         <span class="spacer" style="flex:1"></span>
@@ -545,16 +556,133 @@ function renderIdeas(view) {
 }
 
 function renderPosted(view) {
-  const posts = state.posts
-    .filter((p) => p.status === "posted" && matchesSearch(p))
+  const archivedTab = state.postedTab === "archived";
+  const all = state.posts.filter((p) => p.status === "posted");
+  const nPosted = all.filter((p) => !p.archived_at).length;
+  const nArchived = all.length - nPosted;
+  const posts = all
+    .filter((p) => Boolean(p.archived_at) === archivedTab && matchesSearch(p))
     .sort((a, b) => (b.scheduled_at || b.posted_at || "").localeCompare(a.scheduled_at || a.posted_at || ""));
+  // Drop selections that are no longer visible (e.g. after filtering).
+  const visible = new Set(posts.map((p) => p.id));
+  for (const id of state.selected) if (!visible.has(id)) state.selected.delete(id);
+
+  const toolbar = `
+    <div class="posted-bar">
+      <div class="segmented segmented-sm" role="radiogroup" aria-label="Posted or archived">
+        <button type="button" role="radio" data-act="posted-tab" data-tab="posted" aria-checked="${!archivedTab}">Posted${nPosted ? ` · ${nPosted}` : ""}</button>
+        <button type="button" role="radio" data-act="posted-tab" data-tab="archived" aria-checked="${archivedTab}">🗄️ Archived${nArchived ? ` · ${nArchived}` : ""}</button>
+      </div>
+      <span class="spacer"></span>
+      ${
+        posts.length
+          ? archivedTab
+            ? `<button type="button" class="btn btn-ghost btn-sm" data-act="unarchive-all">↩︎ Restore all</button>`
+            : `<button type="button" class="btn btn-ghost btn-sm" data-act="archive-all">🗄️ Archive all</button>`
+          : ""
+      }
+    </div>`;
+
+  let body;
   if (!posts.length) {
-    view.innerHTML = state.search || state.typeFilter
-      ? emptyHTML("🔍", "No matches", "Try a different search or filter.", false)
-      : emptyHTML("🎉", "Nothing posted yet", "When you mark a caption as posted it moves here, so you can reuse old captions later.", false);
-    return;
+    body =
+      state.search || state.typeFilter
+        ? emptyHTML("🔍", "No matches", "Try a different search or filter.", false)
+        : archivedTab
+          ? emptyHTML("🗄️", "Archive is empty", "Archived posts are kept here, out of the way. Nothing is ever deleted by archiving.", false)
+          : emptyHTML("🎉", "Nothing posted yet", "When you mark a caption as posted it moves here, so you can reuse old captions later.", false);
+  } else {
+    body = `<p class="muted small" style="margin:0 4px 10px">${
+      archivedTab
+        ? "Archived posts are hidden from Posted and the calendar. Tick some to restore them."
+        : "Tick posts to archive just those, or use “Archive all”. Archived posts are kept, not deleted."
+    }</p>
+    <div class="cards">${posts.map((p) => cardHTML(p, { showDate: true, selectable: true })).join("")}</div>`;
   }
-  view.innerHTML = `<div class="cards">${posts.map((p) => cardHTML(p, { showDate: true })).join("")}</div>`;
+  view.innerHTML = toolbar + body + `<div class="bulk-bar" id="bulk-bar" hidden></div>`;
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  const bar = $("#bulk-bar");
+  if (!bar) return;
+  const n = state.selected.size;
+  $$(".card[data-id]").forEach((c) => {
+    const on = state.selected.has(Number(c.dataset.id));
+    c.classList.toggle("selected", on);
+    c.querySelector(".card-check")?.setAttribute("aria-checked", String(on));
+  });
+  $("#fab").hidden = state.view === "settings" || n > 0;
+  bar.hidden = n === 0;
+  if (!n) return;
+  const total = $$(".card[data-id] .card-check").length;
+  const archivedTab = state.postedTab === "archived";
+  bar.innerHTML = `
+    <b>${n} selected</b>
+    ${n < total ? `<button type="button" class="link-btn" data-act="select-all">Select all ${total}</button>` : ""}
+    <span class="spacer"></span>
+    <button type="button" class="btn btn-ghost btn-sm" data-act="clear-selection">Cancel</button>
+    <button type="button" class="btn btn-primary btn-sm" data-act="${archivedTab ? "unarchive-selected" : "archive-selected"}">${
+      archivedTab ? "↩︎ Restore" : "🗄️ Archive"
+    } ${n}</button>`;
+}
+
+async function setArchived(body, msg) {
+  try {
+    const r = await api("/api/posts/archive", { method: "POST", body });
+    state.selected.clear();
+    await loadPosts();
+    render();
+    toast(msg(r.updated));
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function handlePostedAction(act) {
+  const a = act.dataset.act;
+  const plural = (n) => `${n} post${n === 1 ? "" : "s"}`;
+  if (a === "posted-tab") {
+    state.postedTab = act.dataset.tab;
+    state.selected.clear();
+    render();
+    return true;
+  }
+  if (a === "select") {
+    const id = Number(act.closest(".card").dataset.id);
+    state.selected.has(id) ? state.selected.delete(id) : state.selected.add(id);
+    updateSelectionUI();
+    return true;
+  }
+  if (a === "select-all") {
+    $$(".card[data-id]").forEach((c) => state.selected.add(Number(c.dataset.id)));
+    updateSelectionUI();
+    return true;
+  }
+  if (a === "clear-selection") {
+    state.selected.clear();
+    updateSelectionUI();
+    return true;
+  }
+  if (a === "archive-selected") {
+    await setArchived({ archived: true, ids: [...state.selected] }, (n) => `Archived ${plural(n)} 🗄️`);
+    return true;
+  }
+  if (a === "unarchive-selected") {
+    await setArchived({ archived: false, ids: [...state.selected] }, (n) => `Restored ${plural(n)} to Posted`);
+    return true;
+  }
+  if (a === "archive-all") {
+    const n = state.posts.filter((p) => p.status === "posted" && !p.archived_at).length;
+    if (!confirm(`Archive all ${plural(n)}?\n\nThey'll be hidden from Posted and the calendar, but kept safe under “Archived”. Nothing is deleted.`)) return true;
+    await setArchived({ archived: true, all: true }, (k) => `Archived ${plural(k)} 🗄️`);
+    return true;
+  }
+  if (a === "unarchive-all") {
+    await setArchived({ archived: false, all: true }, (k) => `Restored ${plural(k)} to Posted`);
+    return true;
+  }
+  return false;
 }
 
 /* ---------- calendar ---------- */
@@ -567,7 +695,7 @@ function renderCalendar(view) {
   const today = new Date();
   const byDay = new Map();
   for (const p of state.posts) {
-    if (!p.scheduled_at || !matchesSearch(p)) continue;
+    if (!p.scheduled_at || p.archived_at || !matchesSearch(p)) continue;
     const k = dayKey(new Date(p.scheduled_at));
     if (!byDay.has(k)) byDay.set(k, []);
     byDay.get(k).push(p);
@@ -631,6 +759,7 @@ $("#view").addEventListener("click", async (e) => {
     e.stopPropagation();
     const card = act.closest(".card");
     const post = card ? state.posts.find((p) => p.id === Number(card.dataset.id)) : null;
+    if (await handlePostedAction(act)) return;
     if (act.dataset.act === "copy" && post) return copyText(post.caption);
     if (act.dataset.act === "posted" && post) return markPosted(post, act);
     if (act.dataset.act === "new") return openEditor(null);
@@ -657,6 +786,12 @@ $("#view").addEventListener("click", async (e) => {
   }
   const card = e.target.closest(".card");
   if (card) {
+    // While ticking posts in the Posted view, tapping a card ticks it instead of opening it.
+    if (state.view === "posted" && state.selected.size && card.querySelector(".card-check")) {
+      const id = Number(card.dataset.id);
+      state.selected.has(id) ? state.selected.delete(id) : state.selected.add(id);
+      return updateSelectionUI();
+    }
     const post = state.posts.find((p) => p.id === Number(card.dataset.id));
     if (post) openEditor(post);
   }
@@ -1675,7 +1810,7 @@ function bindSettings() {
     download(`captions-${dayKey(new Date())}.json`, JSON.stringify({ exported_at: new Date().toISOString(), posts: state.posts }, null, 2), "application/json");
   });
   $("#export-csv").addEventListener("click", () => {
-    const cols = ["id", "title", "caption", "content_type", "platforms", "scheduled_at", "status", "notes", "created_at"];
+    const cols = ["id", "title", "caption", "content_type", "platforms", "scheduled_at", "status", "notes", "created_at", "archived_at"];
     const cell = (v) => `"${String(Array.isArray(v) ? v.join(", ") : v ?? "").replace(/"/g, '""')}"`;
     const rows = [cols.join(","), ...state.posts.map((p) => cols.map((c) => cell(c === "scheduled_at" && p[c] ? new Date(p[c]).toLocaleString() : p[c])).join(","))];
     download(`captions-${dayKey(new Date())}.csv`, "\ufeff" + rows.join("\n"), "text/csv");
