@@ -1,0 +1,176 @@
+/* A separate, opt-in Christmas theme. Decorations are static and never
+   cover editable text or controls. No changes to the existing themes. */
+.xm-only { display: none !important; }
+.tp-christmas { background: #1e4b3d; border: 1px solid #d9b86e; }
+.tp-christmas i { background: #fffdf6; }
+.tp-christmas i:nth-child(2) { background: #d9b86e; }
+.tp-christmas em { background: #9b3348; border: 2px solid #d9b86e; }
+.tp-christmas::after { content: "✦"; position: absolute; right: 17px; bottom: 11px; color: #fff1ca; font-size: 15px; }
+
+:root[data-theme="christmas"] {
+  --bg: #f3f6ef;
+  --bg-2: #e4ecdf;
+  --surface: #fffdf6;
+  --surface-2: #edf2e9;
+  --text: #243e32;
+  --muted: #607064;
+  --line: #d0dccb;
+  --accent: #9b3348;
+  --accent-2: #843044;
+  --accent-soft: #f5e2e5;
+  --ok: #2c614b;
+  --ok-soft: #e1eee3;
+  --warn: #805b1d;
+  --warn-soft: #f7ebcf;
+  --danger: #ac2d36;
+  --forest: #1e4b3d;
+  --gold: #d9b86e;
+  --shadow: 0 2px 4px #24443208, 0 8px 24px #2444320d;
+  --shadow-lg: 0 24px 70px #14392b40;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: "Nunito", "Plus Jakarta Sans", system-ui, sans-serif;
+  --holiday-display: "Playfair Display", "Iowan Old Style", Georgia, serif;
+  color-scheme: light;
+}
+[data-theme="christmas"] body {
+  background:
+    radial-gradient(circle, #fffdf6 1.5px, transparent 2px) 0 0 / 47px 47px,
+    radial-gradient(circle, #d3dfd1 1px, transparent 1.5px) 19px 23px / 71px 71px,
+    linear-gradient(#e8efe4, #f3f6ef 450px);
+  background-attachment: fixed;
+}
+[data-theme="christmas"] ::selection { background: #eac5cd; color: #243e32; }
+[data-theme="christmas"] :is(h1, h2, h3, .brand, .card-title, .title-input) {
+  font-family: var(--holiday-display); font-weight: 600; letter-spacing: -0.02em;
+}
+[data-theme="christmas"] :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--forest); outline-offset: 3px;
+}
+[data-theme="christmas"] .btn-primary { background: var(--accent); color: var(--surface); box-shadow: 0 3px 0 #732638; }
+[data-theme="christmas"] .btn-primary:hover { background: var(--accent-2); }
+[data-theme="christmas"] .btn-ghost:hover { background: var(--surface-2); border-color: #8aa88b; }
+[data-theme="christmas"] .topbar { background: #f3f6eff2; border-bottom: 1px solid #bbcfba; }
+[data-theme="christmas"] .brand { font-size: 22px; }
+[data-theme="christmas"] .brand-mark { background: var(--forest); color: var(--gold); font-size: 0; border-radius: 50%; }
+[data-theme="christmas"] .brand-mark::before { content: "❄"; font: 23px/1 Georgia, serif; }
+[data-theme="christmas"] .search input { background: var(--surface); }
+[data-theme="christmas"] .tabs a { border-radius: 8px; font-weight: 800; }
+[data-theme="christmas"] .tabs a.active { background: var(--forest); color: var(--surface); }
+[data-theme="christmas"] .tabs a.active .count { background: #fffdf62b; color: var(--surface); }
+
+/* A festive greeting card, with evergreen sprigs and hanging baubles. */
+[data-theme="christmas"] .xm-greeting {
+  position: relative; display: grid !important; justify-items: center; text-align: center;
+  gap: 12px; padding: 30px 110px 25px; margin: 12px 0 20px;
+  background: url("/christmas-garland.svg") center / cover no-repeat, var(--forest);
+  border: 1px solid var(--forest); border-radius: 12px; color: var(--surface);
+  outline: 1px solid #d9b86e66; outline-offset: -7px;
+}
+[data-theme="christmas"] .xm-kicker { font-size: 10px; font-weight: 800; letter-spacing: 0.18em; }
+[data-theme="christmas"] .xm-greeting .xm-kicker { color: #e7cb8c; }
+[data-theme="christmas"] .xm-greeting-title {
+  font: italic 500 clamp(30px, 4.5vw, 43px)/1.16 var(--holiday-display); letter-spacing: -0.03em;
+}
+[data-theme="christmas"] .xm-greeting-note { font-size: 12px; color: #d7e4d3; }
+[data-theme="christmas"] .xm-greeting-star { font-size: 23px; line-height: 1; color: var(--gold); }
+[data-theme="christmas"] .chip { background: var(--surface); border-radius: 8px; }
+/* Selected-state fill must win over the pale unselected background. */
+[data-theme="christmas"] .chip[aria-pressed="true"],
+[data-theme="christmas"] .chip[aria-checked="true"] {
+  background: var(--chip-color, var(--accent)); border-color: var(--chip-color, var(--accent)); color: var(--surface);
+}
+[data-theme="christmas"] .chip[aria-pressed="true"] .dot,
+[data-theme="christmas"] .chip[aria-checked="true"] .dot { background: var(--surface); }
+[data-theme="christmas"] .day-head { align-items: center; }
+[data-theme="christmas"] .day-head h3 { font-size: 21px; }
+[data-theme="christmas"] .day-head::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+
+/* Gift-tag caption cards: paper, a ribbon, and a colored binding. */
+[data-theme="christmas"] .cards { gap: 14px; }
+[data-theme="christmas"] .card { border: 1px solid var(--line); grid-template-columns: 5px 1fr; }
+[data-theme="christmas"] .card::after {
+  content: ""; position: absolute; top: 0; right: 22px; width: 13px; height: 30px;
+  background: var(--accent); border-inline: 2px solid #d9b86e99;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%); pointer-events: none;
+}
+[data-theme="christmas"] .card-top { padding-right: 28px; }
+[data-theme="christmas"] .card-title { font-size: 19px; margin-top: 6px; }
+[data-theme="christmas"] .card-caption { line-height: 1.7; }
+[data-theme="christmas"] .status-idea { background: #f5e2e5; color: #843044; }
+[data-theme="christmas"] .mini-btn:hover { background: var(--surface-2); }
+[data-theme="christmas"] :is(.panel, .cal) { border: 1px solid var(--line); }
+[data-theme="christmas"] .panel h2 { font-size: 22px; }
+[data-theme="christmas"] .cal-head h2 { font-size: 25px; }
+[data-theme="christmas"] .cal-cell.today .cal-num { background: var(--forest); color: var(--surface); }
+[data-theme="christmas"] .cal-cell.selected { background: #e3eddf; }
+[data-theme="christmas"] .theme-card[aria-checked="true"] { border-color: var(--forest); box-shadow: 0 0 0 3px #1e4b3d18; }
+[data-theme="christmas"] .empty-state h3 { font-size: 25px; }
+
+/* Holiday letter stationery, with an ornamental postmark outside the text. */
+[data-theme="christmas"] .editor { background: var(--surface); border: 1px solid var(--line); }
+[data-theme="christmas"] .editor::backdrop { background: #12332799; }
+[data-theme="christmas"] .editor-head h2 { font-size: 21px; }
+[data-theme="christmas"] .title-input { font-size: 24px; }
+[data-theme="christmas"] .caption-wrap {
+  min-width: 0; border: 1px solid #c4d3bd; border-top: 5px solid var(--forest); border-radius: 5px;
+  background: #fffef9; box-shadow: 0 4px 16px #1e4b3d0a;
+}
+[data-theme="christmas"] .xm-letter-head {
+  position: relative; display: grid !important; justify-items: start; gap: 8px;
+  padding: 23px 110px 0 25px; color: var(--forest); pointer-events: none;
+}
+[data-theme="christmas"] .xm-letter-head .xm-kicker { font-size: 9px; letter-spacing: 0.12em; color: var(--muted); }
+[data-theme="christmas"] .xm-letter-title { font: italic 600 27px/1.25 var(--holiday-display); }
+[data-theme="christmas"] .xm-letter-stamp {
+  position: absolute; top: 20px; right: 20px; display: grid; place-items: center; align-content: center;
+  width: 65px; height: 65px; border: 3px double #b8cbb2; border-radius: 50%;
+  color: #678366; font: 28px/1 Georgia, serif; transform: rotate(12deg);
+}
+[data-theme="christmas"] .xm-letter-stamp small { font: 800 6px/2 var(--font); letter-spacing: 0.13em; }
+[data-theme="christmas"] .xm-letter-rule { display: flex; align-items: center; gap: 10px; width: 100%; color: #a38139; font-size: 13px; }
+[data-theme="christmas"] .xm-letter-rule::before,
+[data-theme="christmas"] .xm-letter-rule::after { content: ""; height: 1px; background: #dfcda5; flex: 1; }
+[data-theme="christmas"] .caption-wrap textarea {
+  display: block; border: 0; border-radius: 0; background: transparent; padding: 16px 25px 24px;
+  min-height: 220px; font-size: 16px; line-height: 1.8; box-shadow: none;
+}
+[data-theme="christmas"] .caption-wrap textarea:focus { box-shadow: none; }
+[data-theme="christmas"] .caption-wrap textarea:focus-visible { outline-offset: -6px; }
+[data-theme="christmas"] .caption-wrap textarea::placeholder { color: #73816e; }
+[data-theme="christmas"] .caption-tools { margin: 0 18px; padding: 10px 0; border-top: 1px dashed var(--line); flex-wrap: wrap; }
+[data-theme="christmas"] .caption-tools .small { font-size: 11px; }
+[data-theme="christmas"] .warnings:not(:empty) { padding: 0 18px 12px; }
+[data-theme="christmas"] .notes textarea { background: #f5f8f0; font-size: 16px; }
+[data-theme="christmas"] .img-add { background: #f5f8f0; }
+[data-theme="christmas"] .fab { background: var(--accent); box-shadow: 0 6px 22px #9b334833; border: 1px solid #fffdf655; }
+[data-theme="christmas"] .toast { background: var(--forest); color: var(--surface); }
+[data-theme="christmas"] .toast.error { background: var(--danger); }
+
+[data-theme="christmas"] .login-card { border: 1px solid #c4d3bd; border-top: 6px solid var(--forest); background: var(--surface); }
+[data-theme="christmas"] .login-card .logo-badge { font-size: 0; background: var(--forest); }
+[data-theme="christmas"] .login-card .logo-badge::before { content: "❄"; color: var(--gold); font: 36px/1 Georgia, serif; }
+[data-theme="christmas"] .xm-login-kicker { display: block !important; margin-top: 18px; font-size: 10px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); }
+[data-theme="christmas"] .login-card h1 { font-size: 33px; }
+
+@media (max-width: 640px) {
+  [data-theme="christmas"] .brand { font-size: 19px; }
+  [data-theme="christmas"] .xm-greeting {
+    padding: 25px 34px 22px;
+    /* Keep both decorated edges visible instead of cropping them off on phones. */
+    background-image: url("/christmas-garland.svg"), url("/christmas-garland.svg");
+    background-position: left top, right top;
+    background-size: 640px auto;
+    background-repeat: no-repeat;
+  }
+  [data-theme="christmas"] .xm-greeting-note { font-size: 11px; }
+  [data-theme="christmas"] .xm-greeting .xm-kicker { font-size: 9px; }
+  [data-theme="christmas"] .editor { border: 0; }
+  [data-theme="christmas"] .xm-letter-head { padding: 20px 65px 0 18px; }
+  [data-theme="christmas"] .xm-letter-title { font-size: 23px; }
+  [data-theme="christmas"] .xm-letter-head .xm-kicker { max-width: 170px; font-size: 8px; }
+  [data-theme="christmas"] .xm-letter-stamp { right: 10px; top: 19px; width: 44px; height: 44px; font-size: 21px; }
+  [data-theme="christmas"] .xm-letter-stamp small { font-size: 5px; }
+  [data-theme="christmas"] .caption-wrap textarea { padding: 14px 18px 20px; }
+  [data-theme="christmas"] .caption-tools { margin-inline: 14px; }
+}

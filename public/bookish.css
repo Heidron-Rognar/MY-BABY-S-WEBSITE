@@ -76,6 +76,15 @@
 [data-theme="bookish"] .bk-motto { font: italic 28px/1.2 var(--book-display); color: var(--accent); }
 [data-theme="bookish"] .bk-ornament { font: 28px/1 var(--book-display); color: #9b7b45; }
 [data-theme="bookish"] .chip { border-radius: 3px; background: var(--surface); font-size: 13px; }
+/* The paper background above must not override the selected chip fill. */
+[data-theme="bookish"] .chip[aria-pressed="true"],
+[data-theme="bookish"] .chip[aria-checked="true"] {
+  background: var(--chip-color, var(--accent));
+  border-color: var(--chip-color, var(--accent));
+  color: var(--surface);
+}
+[data-theme="bookish"] .chip[aria-pressed="true"] .dot,
+[data-theme="bookish"] .chip[aria-checked="true"] .dot { background: var(--surface); }
 [data-theme="bookish"] .day-head { align-items: center; }
 [data-theme="bookish"] .day-head h3 { font-size: 24px; }
 [data-theme="bookish"] .day-head::after { content: ""; flex: 1; border-bottom: 1px solid var(--line); }

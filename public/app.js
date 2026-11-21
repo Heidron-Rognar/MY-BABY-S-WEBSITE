@@ -17,10 +17,12 @@ const THEMES = [
   { id: "cyber", name: "Cyber", desc: "Chakra Petch + IBM Plex Mono. Angular sci-fi type & a neon Draft Deck.", preview: "tp-cyber" },
   { id: "matcha", name: "Matcha", desc: "Fraunces + Literata. Soft bookish headings & a cozy paper journal.", preview: "tp-matcha" },
   { id: "bookish", name: "Bookish", desc: "An old-library escape. Ivory manuscripts, burgundy bookmarks & literary serif type.", preview: "tp-bookish" },
+  { id: "christmas", name: "Christmas", desc: "Evergreen, cranberry & golden details. A little holiday magic for your captions.", preview: "tp-christmas" },
 ];
-const THEME_BG = { rose: "#fff7f3", "rose-dark": "#1b1517", cyber: "#121316", matcha: "#f3eee1", bookish: "#f2eadb" };
+const THEME_BG = { rose: "#fff7f3", "rose-dark": "#1b1517", cyber: "#121316", matcha: "#f3eee1", bookish: "#f2eadb", christmas: "#f3f6ef" };
 // Extra fonts are only downloaded when their theme is picked (keep in sync with the snippet in index.html).
 const THEME_FONTS = {
+  christmas: "https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600;1,700&display=swap",
   bookish: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..600&display=swap",
   cyber: "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap",
   matcha:
@@ -29,11 +31,13 @@ const THEME_FONTS = {
 // Content-type colors per theme (default: PALETTE).
 const THEME_PALETTES = {
   bookish: ["#783b48", "#50624b", "#896526", "#486875", "#725c7b", "#9b5038", "#596c60", "#80564a", "#676039", "#5b6275"],
+  christmas: ["#9b3348", "#2c614b", "#86601f", "#496e77", "#79566e", "#9a5031", "#4c6852", "#89554b", "#656b36", "#525f7b"],
   cyber: CYBER_PALETTE,
   // Earthy tea-shop tones: matcha, terracotta, ochre, sage, plum, slate, moss, clay, hojicha, olive.
   matcha: ["#6b8f47", "#c0674a", "#c49a3a", "#7f9f86", "#8a5a7a", "#5b7a99", "#4e6b3a", "#b77b7b", "#8b6b4a", "#9a9a4a"],
 };
 const THEME_CONFETTI = {
+  christmas: ["#9b3348", "#2c614b", "#d9b86e", "#fffdf6", "#a8c9af"],
   bookish: ["#783b48", "#a47b38", "#f2eadb", "#50624b", "#382e28"],
   cyber: ["#f5c400", "#f5c400", "#f2f2f2", "#ffe27a", "#8d9096"],
   matcha: ["#6b8f47", "#9cb86a", "#c5d8a4", "#f3eee1", "#e8b4b8", "#4e6b3a"],
