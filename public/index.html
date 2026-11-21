@@ -16,13 +16,28 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
+    <script>
+      // Apply the theme saved on this device before the page paints (no flash).
+      try {
+        var t = localStorage.getItem("cs-theme");
+        if (t && t !== "auto") document.documentElement.dataset.theme = t;
+        if (t === "cyber") {
+          var l = document.createElement("link");
+          l.rel = "stylesheet"; l.id = "cyber-fonts";
+          l.href = "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap";
+          document.head.appendChild(l);
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <!-- ============ LOGIN ============ -->
     <main id="login" class="login" hidden>
       <form id="login-form" class="login-card" autocomplete="on">
         <div class="logo-badge" aria-hidden="true">✍️</div>
+        <span class="cy-only cy-code" aria-hidden="true">80-A45</span>
         <h1>Caption Studio</h1>
+        <span class="cy-only cy-bracket" aria-hidden="true">[キャプション]</span>
         <p class="muted">All your captions, dates and reminders in one place.</p>
         <label class="field">
           <span>Password</span>
@@ -39,6 +54,7 @@
         <div class="brand">
           <span class="brand-mark" aria-hidden="true">✍️</span>
           <span id="brand-name">Caption Studio</span>
+          <span class="cy-only cy-bracket" aria-hidden="true">[キャプション]</span>
         </div>
         <div class="search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
@@ -55,6 +71,8 @@
         <a href="#ideas" data-view="ideas">Ideas &amp; drafts <span class="count" data-count="ideas"></span></a>
         <a href="#posted" data-view="posted">Posted <span class="count" data-count="posted"></span></a>
       </nav>
+
+      <div class="cy-only cy-strip" aria-hidden="true"><div class="cy-strip-track"><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span><span>キャプション</span><span class="o">キャプション</span></div></div>
 
       <div id="type-filter" class="filter-row" aria-label="Filter by content type"></div>
 
@@ -174,6 +192,8 @@
     </dialog>
 
     <div id="toasts" class="toasts" aria-live="polite"></div>
+    <div class="cy-only cy-rail" aria-hidden="true">SCROLL <span>[スクロール]</span></div>
+    <div class="cy-only cy-star" aria-hidden="true">✦</div>
 
     <script src="/app.js" type="module"></script>
   </body>

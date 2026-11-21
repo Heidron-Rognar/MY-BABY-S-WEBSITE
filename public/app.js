@@ -4,6 +4,51 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const PALETTE = ["#e2557c", "#7c5cff", "#f08a5d", "#1fa6a0", "#3b82f6", "#d97706", "#16a34a", "#c026d3", "#64748b", "#ef4444"];
+// Content-type colors for the Cyber theme: signal yellow, white, and a few neon accents.
+const CYBER_PALETTE = ["#f5c400", "#f2f2f2", "#ff7a1a", "#b6f24a", "#4dd8e0", "#a0a3a8", "#ff4d6d", "#d9c27a", "#8b93ff", "#e0e0e0"];
+
+/* ------------------------------------------------------------------ */
+/* Themes (saved per device in localStorage)                           */
+/* ------------------------------------------------------------------ */
+const THEMES = [
+  { id: "auto", name: "Rosé · Auto", desc: "Light by day, dark at night. Follows your phone.", preview: "tp-auto" },
+  { id: "rose", name: "Rosé Light", desc: "The original soft pink look.", preview: "tp-rose" },
+  { id: "rose-dark", name: "Rosé Night", desc: "Same look, always dark.", preview: "tp-rose-dark" },
+  { id: "cyber", name: "Cyber", desc: "Black, white & signal yellow.", preview: "tp-cyber" },
+];
+const THEME_BG = { rose: "#fff7f3", "rose-dark": "#1b1517", cyber: "#121316" };
+const CYBER_FONTS = "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap";
+
+function currentTheme() {
+  return document.documentElement.dataset.theme || "auto";
+}
+
+function applyThemeChrome() {
+  const t = currentTheme();
+  // Browser bar color on phones.
+  $$('meta[name="theme-color"]').forEach((m) => {
+    const dark = (m.getAttribute("media") || "").includes("dark");
+    m.setAttribute("content", THEME_BG[t] || (dark ? THEME_BG["rose-dark"] : THEME_BG.rose));
+  });
+  if (t === "cyber" && !$("#cyber-fonts")) {
+    const l = document.createElement("link");
+    l.rel = "stylesheet";
+    l.id = "cyber-fonts";
+    l.href = CYBER_FONTS;
+    document.head.append(l);
+  }
+}
+
+function setTheme(id) {
+  if (!THEMES.some((t) => t.id === id)) id = "auto";
+  try {
+    localStorage.setItem("cs-theme", id);
+  } catch {}
+  if (id === "auto") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = id;
+  applyThemeChrome();
+}
+applyThemeChrome();
 const STATUS_LABELS = { idea: "Idea", draft: "Draft", ready: "Ready", posted: "Posted" };
 // Character / hashtag limits per platform (used for gentle warnings in the editor).
 const LIMITS = {
@@ -166,10 +211,11 @@ function typeColor(type) {
   if (!type) return "#9c8a8f";
   const list = state.settings?.content_types || [];
   const i = list.findIndex((t) => t.toLowerCase() === type.toLowerCase());
-  if (i >= 0) return PALETTE[i % PALETTE.length];
+  const pal = currentTheme() === "cyber" ? CYBER_PALETTE : PALETTE;
+  if (i >= 0) return pal[i % pal.length];
   let h = 0;
   for (const c of type) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return PALETTE[h % PALETTE.length];
+  return pal[h % pal.length];
 }
 
 function toast(msg, kind = "") {
@@ -617,7 +663,10 @@ function confetti(x = window.innerWidth / 2, y = window.innerHeight / 2) {
   (editor.open ? editor : document.body).append(canvas);
   const ctx = canvas.getContext("2d");
   ctx.scale(dpr, dpr);
-  const colors = ["#e2557c", "#f08a5d", "#ffd166", "#7c5cff", "#1fa6a0", "#3b82f6"];
+  const colors =
+    currentTheme() === "cyber"
+      ? ["#f5c400", "#f5c400", "#f2f2f2", "#ffe27a", "#8d9096"]
+      : ["#e2557c", "#f08a5d", "#ffd166", "#7c5cff", "#1fa6a0", "#3b82f6"];
   const pieces = Array.from({ length: 70 }, () => {
     const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.9;
     const speed = 5 + Math.random() * 7;
@@ -1376,6 +1425,19 @@ async function renderSettings(view) {
     </section>
 
     <section class="panel">
+      <h2>🎨 Theme</h2>
+      <p class="muted">Pick a look. It's saved on this device, so each phone or computer can have its own.</p>
+      <div class="theme-grid" id="theme-grid" role="radiogroup" aria-label="Theme">
+        ${THEMES.map(
+          (t) => `<button type="button" class="theme-card" role="radio" data-theme-id="${t.id}" aria-checked="${currentTheme() === t.id}">
+            <span class="tc-in"><span class="tp ${t.preview}" aria-hidden="true"><i></i><i></i><em></em></span>
+            <b>${esc(t.name)}</b><small>${esc(t.desc)}</small></span>
+          </button>`
+        ).join("")}
+      </div>
+    </section>
+
+    <section class="panel">
       <h2>⏰ When should I remind you?</h2>
       <div class="check-grid" id="offsets">
         ${REMINDER_CHOICES.map(
@@ -1586,6 +1648,15 @@ function bindSettings() {
   $("#nudge").addEventListener("change", (e) => saveSettings({ nudge_unposted: e.target.checked }));
   $("#digest-empty").addEventListener("change", (e) => saveSettings({ digest_when_empty: e.target.checked }));
   $("#app-name").addEventListener("change", (e) => saveSettings({ app_name: e.target.value }));
+  $("#theme-grid").addEventListener("click", (e) => {
+    const card = e.target.closest("[data-theme-id]");
+    if (!card || card.dataset.themeId === currentTheme()) return;
+    setTheme(card.dataset.themeId);
+    $$("#theme-grid [data-theme-id]").forEach((c) => c.setAttribute("aria-checked", String(c.dataset.themeId === currentTheme())));
+    renderTagEditors(); // content-type colors follow the theme
+    renderTypeFilter();
+    toast(`Theme: ${THEMES.find((t) => t.id === currentTheme()).name}`);
+  });
 
   $("#export-json").addEventListener("click", () => {
     download(`captions-${dayKey(new Date())}.json`, JSON.stringify({ exported_at: new Date().toISOString(), posts: state.posts }, null, 2), "application/json");
