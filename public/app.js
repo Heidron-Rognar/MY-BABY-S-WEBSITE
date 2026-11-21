@@ -14,7 +14,7 @@ const THEMES = [
   { id: "auto", name: "Rosé · Auto", desc: "Light by day, dark at night. Follows your phone.", preview: "tp-auto" },
   { id: "rose", name: "Rosé Light", desc: "The original soft pink look.", preview: "tp-rose" },
   { id: "rose-dark", name: "Rosé Night", desc: "Same look, always dark.", preview: "tp-rose-dark" },
-  { id: "cyber", name: "Cyber", desc: "Black, white & signal yellow.", preview: "tp-cyber" },
+  { id: "cyber", name: "Cyber", desc: "Signal yellow, cyan circuitry & a terminal-inspired Draft Deck.", preview: "tp-cyber" },
   { id: "matcha", name: "Matcha", desc: "Cream paper, serif type & matcha green. Cozy and bookish.", preview: "tp-matcha" },
 ];
 const THEME_BG = { rose: "#fff7f3", "rose-dark": "#1b1517", cyber: "#121316", matcha: "#f3eee1" };

@@ -636,7 +636,95 @@ svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
 [data-theme="cyber"] .editor::backdrop { background: rgba(0, 0, 0, 0.7); }
 [data-theme="cyber"] .editor-head h2 { font-weight: 900; font-size: 18px; }
 [data-theme="cyber"] .group-label { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; }
-[data-theme="cyber"] .caption-wrap textarea, [data-theme="cyber"] .notes textarea { background: #101113; }
+/* Draft Deck: a writing console, not a recolored paper notebook.
+   Decoration stays outside the editable text and never intercepts input. */
+[data-theme="cyber"] .caption-wrap {
+  --deck-cyan: #65e3e4;
+  position: relative;
+  min-width: 0;
+  border: 1px solid #4b4d49;
+  border-top: 3px solid var(--accent);
+  padding: 18px 18px 0;
+  background:
+    radial-gradient(ellipse at 100% 0, rgba(101, 227, 228, 0.08), transparent 55%),
+    #101316;
+  box-shadow: 5px 5px 0 #0b0c0e;
+}
+[data-theme="cyber"] .caption-wrap::after {
+  content: ""; position: absolute; top: -3px; right: 16px; width: 72px; height: 3px;
+  background: repeating-linear-gradient(120deg, var(--accent) 0 5px, #101316 5px 9px);
+  pointer-events: none;
+}
+[data-theme="cyber"] .cy-deck-head {
+  display: flex !important; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 20px;
+}
+[data-theme="cyber"] .cy-deck-identity { display: grid; gap: 6px; }
+[data-theme="cyber"] .cy-deck-kicker,
+[data-theme="cyber"] .cy-deck-channel,
+[data-theme="cyber"] .cy-deck-signal,
+[data-theme="cyber"] .caption-tools {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+[data-theme="cyber"] .cy-deck-kicker { color: #a2afb6; font-size: 9px; letter-spacing: 0.16em; }
+[data-theme="cyber"] .cy-deck-title {
+  font-family: var(--wide); font-size: clamp(22px, 5vw, 32px); line-height: 1;
+  font-weight: 900; font-stretch: 125%; letter-spacing: -0.04em; color: #f0f3ef;
+}
+[data-theme="cyber"] .cy-deck-title > span { color: var(--accent); }
+[data-theme="cyber"] .cy-deck-signal { display: grid; justify-items: end; gap: 7px; flex-shrink: 0; }
+[data-theme="cyber"] .cy-deck-signal > span:first-child {
+  color: var(--deck-cyan); font-size: 25px; line-height: 1; letter-spacing: 0.12em;
+  text-shadow: 2px 0 rgba(101, 227, 228, 0.2);
+}
+[data-theme="cyber"] .cy-deck-signal > span:last-child {
+  display: flex; align-items: center; gap: 7px; color: #a2afb6; font-size: 9px; letter-spacing: 0.08em;
+}
+[data-theme="cyber"] .cy-deck-signal i { width: 5px; height: 5px; background: var(--deck-cyan); box-shadow: 0 0 8px #65e3e466; }
+[data-theme="cyber"] .cy-deck-channel {
+  display: flex !important; align-items: center; justify-content: space-between; gap: 8px;
+  border-top: 1px solid #303b40; padding: 10px 0;
+  color: #9aa9b0; font-size: 10px; letter-spacing: 0.07em;
+}
+[data-theme="cyber"] .cy-deck-channel b { color: var(--accent); font-weight: 400; }
+[data-theme="cyber"] .cy-deck-channel > span:last-child { color: var(--deck-cyan); }
+[data-theme="cyber"] .caption-wrap textarea {
+  display: block; min-height: 240px; padding: 19px 20px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 15px; line-height: 1.8; color: #e2eeee;
+  caret-color: var(--deck-cyan); border: 1px solid #35444a;
+  background-color: #0b1013;
+  background-image:
+    linear-gradient(var(--deck-cyan), var(--deck-cyan)),
+    linear-gradient(var(--deck-cyan), var(--deck-cyan)),
+    linear-gradient(rgba(101, 227, 228, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(101, 227, 228, 0.035) 1px, transparent 1px);
+  background-size: 16px 2px, 2px 16px, 27px 27px, 27px 27px;
+  background-position: 0 0; background-repeat: no-repeat, no-repeat, repeat, repeat;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+[data-theme="cyber"] .caption-wrap textarea::placeholder { color: #85969e; }
+[data-theme="cyber"] .caption-wrap textarea:focus {
+  border-color: var(--deck-cyan);
+  box-shadow: 0 0 0 1px var(--deck-cyan), inset 0 0 26px rgba(101, 227, 228, 0.04);
+}
+[data-theme="cyber"] .caption-tools {
+  flex-wrap: wrap; margin-top: 0; padding: 10px 0; min-height: 50px;
+}
+[data-theme="cyber"] .caption-tools .muted { color: #a2afb6; font-size: 10px; line-height: 1.7; }
+[data-theme="cyber"] .caption-tools .btn { color: var(--deck-cyan); border-color: #35444a; font-size: 10px; }
+[data-theme="cyber"] .caption-wrap .warnings:not(:empty) { margin: 0 0 12px; }
+[data-theme="cyber"] .notes textarea {
+  background: #101719; border-left: 2px solid #65e3e4;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+@media (max-width: 640px) {
+  [data-theme="cyber"] .caption-wrap { padding: 14px 12px 0; box-shadow: 3px 3px 0 #0b0c0e; }
+  [data-theme="cyber"] .caption-wrap textarea { padding: 14px; font-size: 16px; }
+  [data-theme="cyber"] .cy-deck-kicker { font-size: 8px; letter-spacing: 0.1em; }
+  [data-theme="cyber"] .cy-deck-signal > span:first-child { font-size: 21px; }
+  [data-theme="cyber"] .cy-deck-channel { font-size: 9px; }
+}
 [data-theme="cyber"] .segmented { border-radius: 0; background: transparent; border: 1px solid var(--line); }
 [data-theme="cyber"] .segmented button { border-radius: 0; text-transform: uppercase; letter-spacing: 0.1em; font-size: 11.5px; }
 [data-theme="cyber"] .segmented button[aria-checked="true"] { background: var(--accent); color: #111; box-shadow: none; }
