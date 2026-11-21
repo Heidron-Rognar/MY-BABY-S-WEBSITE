@@ -10,7 +10,7 @@ const runtimeFonts = runInNewContext(`(${app.match(/const THEME_FONTS = (\{[\s\S
 const startupFonts = runInNewContext(`(${html.match(/var fonts = (\{[\s\S]*?\n        \});/)[1]})`);
 
 test("saved-theme startup and runtime switching request identical font families", () => {
-  assert.deepEqual(Object.keys(runtimeFonts).sort(), ["cyber", "matcha"]);
+  assert.deepEqual(Object.keys(runtimeFonts).sort(), ["bookish", "cyber", "matcha"]);
   for (const theme of Object.keys(runtimeFonts)) {
     assert.equal(startupFonts[theme], runtimeFonts[theme]);
     assert.equal(new URL(runtimeFonts[theme]).searchParams.get("display"), "swap");
@@ -35,4 +35,31 @@ test("Matcha retains its bookish pairing and readable notebook metrics", () => {
   assert.match(css, /--font: "Literata"/);
   assert.match(css, /--serif-display: "Fraunces"/);
   assert.match(css, /\[data-theme="matcha"\] \.caption-wrap textarea \{\s*--lh: 27px;\s*line-height: var\(--lh\)/);
+});
+
+
+test("Bookish registers a separate font pairing, palette, and picker entry", () => {
+  const families = new URL(runtimeFonts.bookish).searchParams.getAll("family");
+  assert.ok(families.some((family) => family.startsWith("Cormorant Garamond:")));
+  assert.ok(families.some((family) => family.startsWith("Literata:")));
+  assert.match(app, /id: "bookish", name: "Bookish"/);
+  assert.match(app, /bookish: "#f2eadb"/);
+  assert.match(app, /const THEME_PALETTES = \{\s*bookish: \[/);
+  assert.match(app, /const THEME_CONFETTI = \{\s*bookish: \[/);
+  assert.match(html, /href="\/bookish.css"/);
+});
+
+test("Bookish styles are isolated from Matcha and the other themes", () => {
+  const bookish = readFileSync(new URL("../public/bookish.css", import.meta.url), "utf8");
+  assert.match(bookish, /\.bk-only \{ display: none !important; \}/);
+  assert.match(bookish, /--book-display: "Cormorant Garamond"/);
+  assert.doesNotMatch(bookish, /data-theme="matcha"/);
+  // Every selector must target Bookish, its swatch, or its hidden-only decorations.
+  const clean = bookish.replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const block of clean.split(/[{}]/)) {
+    if (!block.trim() || block.includes(";") || block.trim().startsWith("@")) continue;
+    for (const selector of block.trim().split(/,\s*(?=(?:\[|:root|\.tp|\.bk))/)) {
+      assert.match(selector, /^(?::root)?\[data-theme="bookish"\]|^\.tp-bookish\b|^\.bk-only\b/);
+    }
+  }
 });

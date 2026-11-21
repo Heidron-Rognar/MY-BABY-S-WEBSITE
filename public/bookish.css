@@ -1,0 +1,179 @@
+/* Bookish is independent of Matcha. All app overrides are theme-scoped;
+   only its picker swatch and hidden-by-default decorations are global. */
+.bk-only { display: none !important; }
+.tp-bookish {
+  background: #f2eadb; border: 1px solid #cdbfa4; border-radius: 2px;
+  box-shadow: inset 5px 0 #783b48, inset 8px 0 #d6c6aa; padding-left: 18px;
+}
+.tp-bookish i { background: #382e28; border-radius: 0; height: 2px; }
+.tp-bookish i:nth-child(1) { height: 10px; width: 58%; }
+.tp-bookish em {
+  width: 12px; height: 28px; right: 13px; top: 0; border-radius: 0; background: #783b48;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
+}
+
+:root[data-theme="bookish"] {
+  --bg: #f2eadb;
+  --bg-2: #e7dbc5;
+  --surface: #fffaf0;
+  --surface-2: #eee5d4;
+  --text: #382e28;
+  --muted: #766653;
+  --line: #d5c7ae;
+  --accent: #783b48;
+  --accent-2: #65313d;
+  --accent-soft: #efdee0;
+  --ok: #465c40;
+  --ok-soft: #e4eadb;
+  --warn: #805c22;
+  --warn-soft: #f4e7cb;
+  --danger: #a23732;
+  --shadow: 0 2px 3px #4330180a, 0 8px 22px #4330180a;
+  --shadow-lg: 0 24px 70px #382e2840;
+  --radius: 3px;
+  --radius-sm: 3px;
+  --font: "Literata", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --book-display: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  color-scheme: light;
+}
+[data-theme="bookish"] body {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23766553' opacity='.045' filter='url(%23p)' d='M0 0h160v160H0z'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 50% 0, #fffcf4, transparent 75%), var(--bg);
+  background-attachment: fixed;
+  font-optical-sizing: auto;
+}
+[data-theme="bookish"] ::selection { background: #e2c5c9; color: #382e28; }
+[data-theme="bookish"] :is(h1, h2, h3, .brand, .card-title, .title-input) {
+  font-family: var(--book-display); font-weight: 600; letter-spacing: 0;
+}
+[data-theme="bookish"] :is(button, input, textarea, select):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+[data-theme="bookish"] .btn { border-radius: 3px; }
+[data-theme="bookish"] .btn-primary { background: var(--accent); box-shadow: 0 2px 0 #542632; }
+[data-theme="bookish"] .btn-ghost { background: transparent; }
+[data-theme="bookish"] :is(.link-btn, .mini-btn) { color: var(--accent); }
+[data-theme="bookish"] .icon-btn { border-radius: 3px; }
+[data-theme="bookish"] .topbar { background: #f2eadbf2; border-bottom: 3px double var(--line); }
+[data-theme="bookish"] .brand { font-size: 25px; }
+[data-theme="bookish"] .brand-mark {
+  font-size: 0; border: 1px solid var(--accent); border-radius: 2px; background: transparent;
+}
+[data-theme="bookish"] .brand-mark::before { content: "Ex"; font: italic 23px var(--book-display); color: var(--accent); }
+[data-theme="bookish"] .search input { background: var(--surface); border-radius: 3px; }
+[data-theme="bookish"] .tabs a {
+  border-radius: 0; font-variant: small-caps; letter-spacing: 0.04em; font-size: 15px;
+}
+[data-theme="bookish"] .tabs a.active { background: transparent; color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
+[data-theme="bookish"] .count { border-radius: 2px; background: var(--surface-2); color: var(--muted); }
+[data-theme="bookish"] .tabs a.active .count { background: var(--accent); color: var(--surface); }
+[data-theme="bookish"] .bk-frontispiece {
+  display: grid !important; justify-items: center; gap: 5px; text-align: center;
+  padding: 22px 8px 16px; margin-bottom: 18px; border-bottom: 3px double var(--line);
+}
+[data-theme="bookish"] .bk-edition { font-size: 10px; letter-spacing: 0.2em; color: var(--muted); }
+[data-theme="bookish"] .bk-motto { font: italic 28px/1.2 var(--book-display); color: var(--accent); }
+[data-theme="bookish"] .bk-ornament { font: 28px/1 var(--book-display); color: #9b7b45; }
+[data-theme="bookish"] .chip { border-radius: 3px; background: var(--surface); font-size: 13px; }
+[data-theme="bookish"] .day-head { align-items: center; }
+[data-theme="bookish"] .day-head h3 { font-size: 24px; }
+[data-theme="bookish"] .day-head::after { content: ""; flex: 1; border-bottom: 1px solid var(--line); }
+
+/* Catalog cards: a ruled index slip with a punched hole and tinted spine. */
+[data-theme="bookish"] .cards { gap: 14px; }
+[data-theme="bookish"] .card {
+  border: 1px solid var(--line); grid-template-columns: 5px 1fr;
+  background: linear-gradient(transparent 43px, #d5c7ae80 43px 44px, transparent 44px), var(--surface);
+}
+[data-theme="bookish"] .card::after {
+  content: ""; position: absolute; top: 17px; right: 15px; width: 8px; height: 8px;
+  border: 1px solid var(--line); border-radius: 50%; background: var(--bg); pointer-events: none;
+}
+[data-theme="bookish"] .card-top { padding-right: 18px; min-height: 20px; }
+[data-theme="bookish"] .card-time { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
+[data-theme="bookish"] .card-title { font-size: 22px; margin-top: 9px; }
+[data-theme="bookish"] .card-caption { line-height: 1.7; }
+[data-theme="bookish"] .card-thumb { border-radius: 1px; border: 3px solid #fff; box-shadow: 0 1px 4px #382e2826; }
+[data-theme="bookish"] :is(.badge, .status, .mini-btn, .card-check) { border-radius: 2px; }
+[data-theme="bookish"] .status { font-size: 10px; letter-spacing: 0.1em; font-weight: 600; }
+[data-theme="bookish"] .status-idea { background: #eae1e9; color: #72536e; }
+[data-theme="bookish"] .empty-state h3 { font-size: 28px; font-style: italic; }
+[data-theme="bookish"] :is(.panel, .cal) { border: 1px solid var(--line); }
+[data-theme="bookish"] .panel h2 { font-size: 26px; }
+[data-theme="bookish"] .cal-head h2 { font-size: 30px; }
+[data-theme="bookish"] .cal-num { border-radius: 2px; }
+[data-theme="bookish"] .cal-cell.today .cal-num { color: var(--surface); }
+[data-theme="bookish"] :is(.cal-item, .theme-card, .reminder-box, .tag, .pill-status, .bulk-bar) { border-radius: 3px; }
+
+/* An unruled manuscript page: generous margins, a bound edge and ribbon. */
+[data-theme="bookish"] .editor { border: 1px solid var(--line); border-radius: 4px; }
+[data-theme="bookish"] .editor::backdrop { background: #29201999; }
+[data-theme="bookish"] .editor-head { border-bottom: 3px double var(--line); }
+[data-theme="bookish"] .editor-head h2 { font-size: 24px; }
+[data-theme="bookish"] .title-input { font-size: 26px; }
+[data-theme="bookish"] .caption-wrap {
+  position: relative; min-width: 0; border: 1px solid var(--line); border-radius: 1px 4px 4px 1px;
+  background: linear-gradient(90deg, #d6c6a655, transparent 6%, transparent 96%, #d6c6a633), #fffdf6;
+  box-shadow: inset 5px 0 #ebe2d0, inset 6px 0 #d5c7ae, 2px 2px 0 #e9dfcd, 3px 3px 0 #d5c7ae;
+}
+[data-theme="bookish"] .bk-manuscript-head {
+  position: relative; display: grid !important; justify-items: center; gap: 9px;
+  padding: 32px 32px 0; text-align: center; pointer-events: none;
+}
+[data-theme="bookish"] .bk-bookmark {
+  position: absolute; top: -1px; right: 24px; width: 18px; height: 42px; background: var(--accent);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+}
+[data-theme="bookish"] .bk-chapter { font: italic 32px/1.15 var(--book-display); color: var(--text); }
+[data-theme="bookish"] .bk-manuscript-rule {
+  display: flex; align-items: center; gap: 12px; width: min(210px, 100%); font-size: 20px; color: #9b7b45;
+}
+[data-theme="bookish"] .bk-manuscript-rule::before,
+[data-theme="bookish"] .bk-manuscript-rule::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+[data-theme="bookish"] .caption-wrap textarea {
+  display: block; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  padding: 16px 38px 24px; min-height: 240px; font-size: 16px; line-height: 1.85;
+}
+[data-theme="bookish"] .caption-wrap textarea:focus { box-shadow: none; }
+[data-theme="bookish"] .caption-wrap textarea:focus-visible { outline-offset: -8px; }
+[data-theme="bookish"] .caption-wrap textarea::placeholder { color: #8b7963; font-style: italic; }
+[data-theme="bookish"] .caption-tools {
+  margin: 0 22px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap;
+}
+[data-theme="bookish"] .caption-tools .small { font-size: 11px; }
+[data-theme="bookish"] .warnings:not(:empty) { padding: 0 18px 14px; }
+[data-theme="bookish"] .group-label { font-variant: small-caps; letter-spacing: 0.04em; }
+[data-theme="bookish"] :is(.date-row input, .segmented, .segmented button, .notes textarea, .img-add) { border-radius: 3px; }
+[data-theme="bookish"] .notes textarea { background: #fffdf6; font-size: 16px; line-height: 1.7; }
+[data-theme="bookish"] .img-tile { border-radius: 2px; }
+[data-theme="bookish"] .fab {
+  border-radius: 3px; background: var(--accent); box-shadow: 0 5px 18px #783b4833;
+  font-family: var(--book-display); font-size: 20px; font-weight: 600;
+}
+[data-theme="bookish"] .toast { border-radius: 3px; background: var(--text); color: var(--surface); }
+[data-theme="bookish"] .toast.error { background: var(--danger); }
+
+/* The login is a bookplate, not Matcha's cloth-bound cover. */
+[data-theme="bookish"] .login-card {
+  position: relative; background: var(--surface); border: 4px double #ad9369; border-radius: 2px;
+  padding: 38px 30px; outline: 1px solid var(--line); outline-offset: -12px;
+}
+[data-theme="bookish"] .login-card .logo-badge { display: none; }
+[data-theme="bookish"] .bk-kicker { display: block !important; color: var(--accent); font-size: 12px; font-variant: small-caps; letter-spacing: 0.15em; }
+[data-theme="bookish"] .login-card h1 { font-size: 42px; line-height: 1.1; margin: 16px 0 12px; }
+[data-theme="bookish"] .login-card input { border-radius: 2px; }
+
+@media (max-width: 640px) {
+  [data-theme="bookish"] .brand { font-size: 22px; }
+  [data-theme="bookish"] .bk-frontispiece { padding-top: 16px; }
+  [data-theme="bookish"] .bk-motto { font-size: 24px; }
+  [data-theme="bookish"] .editor { border: 0; border-radius: 0; }
+  [data-theme="bookish"] .bk-manuscript-head { padding: 28px 22px 0; }
+  [data-theme="bookish"] .bk-manuscript-head .bk-edition { font-size: 9px; letter-spacing: 0.12em; }
+  [data-theme="bookish"] .bk-chapter { font-size: 28px; }
+  [data-theme="bookish"] .bk-bookmark { right: 15px; width: 14px; height: 32px; }
+  [data-theme="bookish"] .caption-wrap textarea { padding: 14px 22px 20px; }
+  [data-theme="bookish"] .caption-tools { margin: 0 16px; }
+  [data-theme="bookish"] .fab { padding: 14px; }
+}

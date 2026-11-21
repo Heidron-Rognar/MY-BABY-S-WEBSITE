@@ -16,12 +16,14 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/bookish.css" />
     <script>
       // Apply the theme saved on this device before the page paints (no flash).
       try {
         var t = localStorage.getItem("cs-theme");
         if (t && t !== "auto") document.documentElement.dataset.theme = t;
         var fonts = {
+          bookish: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..600&display=swap",
           cyber: "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap",
           matcha: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..600&display=swap"
         };
@@ -40,6 +42,7 @@
         <div class="logo-badge" aria-hidden="true">✍️</div>
         <span class="cy-only cy-code" aria-hidden="true">80-A45</span>
         <span class="mt-only mt-kicker" aria-hidden="true">~ a little book of captions ~</span>
+        <span class="bk-only bk-kicker" aria-hidden="true">The private collection</span>
         <h1>Caption Studio</h1>
         <span class="mt-only mt-fleuron" aria-hidden="true">❦</span>
         <span class="cy-only cy-bracket" aria-hidden="true">[キャプション]</span>
@@ -81,6 +84,12 @@
 
       <div class="mt-only mt-rule" aria-hidden="true"><span>❦</span></div>
 
+      <div class="bk-only bk-frontispiece" aria-hidden="true">
+        <span class="bk-edition">THE CAPTION COLLECTION</span>
+        <span class="bk-motto">A place for every unwritten story.</span>
+        <span class="bk-ornament">❧</span>
+      </div>
+
       <div id="type-filter" class="filter-row" aria-label="Filter by content type"></div>
 
       <main id="view" class="view" tabindex="-1"></main>
@@ -114,6 +123,12 @@
               <div class="cy-deck-signal"><span>文字</span><span>TEXT MODE <i></i></span></div>
             </div>
             <div class="cy-only cy-deck-channel" aria-hidden="true"><span><b>01</b> / CAPTION_BUFFER</span><span>INPUT ↓</span></div>
+            <div class="bk-only bk-manuscript-head" aria-hidden="true">
+              <span class="bk-bookmark"></span>
+              <span class="bk-edition">FROM THE WRITING DESK</span>
+              <span class="bk-chapter">The next chapter</span>
+              <span class="bk-manuscript-rule">❦</span>
+            </div>
             <textarea id="f-caption" rows="8" maxlength="10000" aria-label="Caption" placeholder="Write your caption here… ✨"></textarea>
             <div class="caption-tools">
               <span id="caption-stats" class="muted small"></span>
