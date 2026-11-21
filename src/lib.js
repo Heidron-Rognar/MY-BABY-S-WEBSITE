@@ -1,3 +1,5 @@
+import { normalizeBrandIcon } from "../public/branding.js";
+
 /** Pure helpers shared by the worker (and unit tests). No Cloudflare APIs in here. */
 
 export const STATUSES = ["idea", "draft", "ready", "posted"];
@@ -11,6 +13,8 @@ export const CONTENT_TYPES_VERSION = 2;
 
 export const DEFAULT_SETTINGS = {
   app_name: "Caption Studio",
+  brand_icon: { mode: "theme" },
+  caption_templates: [],
   content_types: ["Showcase", "Relatable", "Trend", "Motivational", "Feedbacks", "Educational", "Personal/Brand", "Mini Quiz"],
   platforms: ["Instagram", "TikTok", "Facebook", "YouTube", "Threads", "X"],
   reminder_offsets: [1440, 60, 0], // minutes before the post: 1 day, 1 hour, at post time
@@ -55,6 +59,8 @@ export function isValidTimeZone(tz) {
 export function normalizeSettings(raw = {}) {
   const s = { ...DEFAULT_SETTINGS };
   if (raw.app_name !== undefined) s.app_name = str(raw.app_name, 60) || DEFAULT_SETTINGS.app_name;
+  if (raw.brand_icon !== undefined) s.brand_icon = normalizeBrandIcon(raw.brand_icon);
+  if (raw.caption_templates !== undefined) s.caption_templates = normalizeTemplates(raw.caption_templates);
   if (raw.content_types !== undefined) s.content_types = cleanList(raw.content_types, DEFAULT_SETTINGS.content_types);
   if (raw.platforms !== undefined) s.platforms = cleanList(raw.platforms, DEFAULT_SETTINGS.platforms);
   if (raw.reminder_offsets !== undefined) s.reminder_offsets = normalizeOffsets(raw.reminder_offsets);
@@ -73,6 +79,23 @@ export function normalizeSettings(raw = {}) {
     if (raw[k] !== undefined) s[k] = str(raw[k], 300);
   }
   return s;
+}
+
+/** Templates deliberately exclude dates, images, status, and reminders. */
+export function normalizeTemplates(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value.filter((t) => t && typeof t === "object" && !Array.isArray(t)).map((t) => ({
+    name: str(t.name, 80), title: str(t.title, 200),
+    caption: typeof t.caption === "string" ? t.caption.slice(0, 10000) : "",
+    notes: typeof t.notes === "string" ? t.notes.slice(0, 5000) : "",
+    content_type: str(t.content_type, 60), platforms: cleanList(t.platforms, [], 10, 40),
+  })).filter((t) => {
+    const key = t.name.toLowerCase();
+    if (!key || seen.has(key) || !(t.title || t.caption.trim())) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 30);
 }
 
 /** Clean a list of "minutes before" values: whole numbers 0..14 days, unique, largest first, max 8. */
