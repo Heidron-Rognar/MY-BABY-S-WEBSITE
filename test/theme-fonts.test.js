@@ -10,7 +10,7 @@ const runtimeFonts = runInNewContext(`(${app.match(/const THEME_FONTS = (\{[\s\S
 const startupFonts = runInNewContext(`(${html.match(/var fonts = (\{[\s\S]*?\n        \});/)[1]})`);
 
 test("saved-theme startup and runtime switching request identical font families", () => {
-  assert.deepEqual(Object.keys(runtimeFonts).sort(), ["bookish", "cyber", "matcha"]);
+  assert.deepEqual(Object.keys(runtimeFonts).sort(), ["bookish", "christmas", "cyber", "matcha"]);
   for (const theme of Object.keys(runtimeFonts)) {
     assert.equal(startupFonts[theme], runtimeFonts[theme]);
     assert.equal(new URL(runtimeFonts[theme]).searchParams.get("display"), "swap");
@@ -45,7 +45,7 @@ test("Bookish registers a separate font pairing, palette, and picker entry", () 
   assert.match(app, /id: "bookish", name: "Bookish"/);
   assert.match(app, /bookish: "#f2eadb"/);
   assert.match(app, /const THEME_PALETTES = \{\s*bookish: \[/);
-  assert.match(app, /const THEME_CONFETTI = \{\s*bookish: \[/);
+  assert.match(app, /const THEME_CONFETTI = \{[\s\S]*?bookish: \[/);
   assert.match(html, /href="\/bookish.css"/);
 });
 
