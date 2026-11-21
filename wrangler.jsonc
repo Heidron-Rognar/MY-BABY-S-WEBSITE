@@ -3,6 +3,8 @@
   "name": "caption-studio",
   "main": "src/worker.js",
   "compatibility_date": "2025-11-01",
+  // Gives the worker Node's fast native Buffer (used to store photos efficiently within free CPU limits).
+  "compatibility_flags": ["nodejs_compat"],
 
   // The website (HTML/CSS/JS) lives in ./public and is served for free as static assets.
   "assets": {

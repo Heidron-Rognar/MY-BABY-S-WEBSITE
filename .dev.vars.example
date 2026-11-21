@@ -2,3 +2,7 @@
 APP_PASSWORD=change-me
 # Optional: lets you test the Telegram parts locally
 # TELEGRAM_BOT_TOKEN=123456:ABC...
+
+# Local testing only: lets login work when the site is shown inside a preview frame.
+# Never set this on the real Cloudflare Worker.
+# EMBEDDED_PREVIEW=1

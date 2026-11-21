@@ -3,11 +3,13 @@
 One place for all your social media captions: no more Google Docs, random notes, or screenshots.
 
 - **Write captions** with a live character, word, and hashtag counter, plus warnings when a caption is too long for Instagram, TikTok, X, Threads, etc.
-- **Schedule them** with a date and time, a **content type** (Reel, Carousel, Photo, Story…), and **platforms**.
+- **Schedule them** with a date and time, a **content type** (Showcase, Relatable, Trend, Motivational, Feedbacks, Educational, Personal/Brand, Mini Quiz; editable in Settings), and **platforms**.
+- **Attach photos** (up to 10 per post). Paste, drag & drop or pick from your gallery. They're resized in your browser to max 2048 px so they fit the free database, and sent to you on Telegram at posting time. Videos aren't supported (too big for free storage), so paste a Drive link in the notes instead.
 - **See everything**: an Upcoming list, a month **Calendar**, **Ideas & drafts** (captions with no date yet), and a **Posted** archive you can search and reuse.
 - **Get Telegram reminders**:
   - before each post (default: 1 day before, 1 hour before, and at posting time)
-  - at posting time the caption arrives as its own message, so you can long-press, copy, and paste it into Instagram
+  - **custom times** like 45 minutes or 2 hours before, either for all posts (Settings) or for a single post (in the editor, choose Reminders → Custom)
+  - at posting time your **photos** arrive (as an album if there are several), then the caption as its own message, so you can save, long-press, copy, and post
   - an optional **morning summary** of today's posts
   - a **"Did you post it?"** nudge if you forgot to mark it as posted
   - tap **✅ Mark as posted** right in Telegram
@@ -20,11 +22,13 @@ One place for all your social media captions: no more Google Docs, random notes,
 | Piece | Service | Free plan |
 | --- | --- | --- |
 | Website + API | Cloudflare Workers | 100,000 requests/day |
-| Database | Cloudflare D1 | 5 GB storage |
+| Database (captions + photos) | Cloudflare D1 | 500 MB per database: unlimited captions, roughly 400–800 photos |
 | Reminder schedule | Cloudflare Cron Triggers | runs every 5 minutes |
 | Notifications | Telegram Bot API | free |
 
-You don't need a credit card. Personal use stays far below these limits.
+You don't need a credit card. On the free plan there's **no way to get billed**: if a limit is ever reached, that feature just pauses (for example, photo uploads say "storage is full") until you free up space or the daily limit resets.
+
+**About photos:** the free database is capped at 500 MB, and photos fill most of it (captions are tiny). **Settings → Photo storage** shows how full it is and can remove photos from posts you posted more than 30 days ago (the captions stay).
 
 ---
 
@@ -65,7 +69,7 @@ Only *your* Telegram chat can control the bot. The secret link from step 3 is wh
 ---
 
 ## ⚙️ Settings you can change in the app
-- Which reminders to get (1 week, 3 days, 1 day, 3 hours, 1 hour, 30 min, 15 min before, or at posting time)
+- Which reminders to get (1 week, 3 days, 1 day, 3 hours, 1 hour, 30 min, 15 min before, at posting time, or any **custom** time up to 14 days before; max 8)
 - The morning summary time, or turn it off
 - Your time zone (default `Asia/Manila`)
 - Your own list of content types and platforms
@@ -88,4 +92,4 @@ src/lib.js       reminder timing, validation, formatting (unit-tested)
 test/            node --test unit tests
 wrangler.jsonc   Cloudflare config (D1 database, cron every 5 min)
 ```
-Database tables are created automatically the first time the app runs.
+Database tables are created automatically the first time the app runs, and upgraded automatically when new versions add features. Images are stored as base64 in the `images` table.
