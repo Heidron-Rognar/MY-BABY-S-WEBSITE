@@ -3,6 +3,9 @@
 One place for all your social media captions: no more Google Docs, random notes, or screenshots.
 
 - **A daily moment of encouragement** in every theme: a greeting card with a World English Bible (WEB) verse and reference. **100 public-domain verses are bundled with the app**—no Bible API, subscription, or key setup. A per-device shuffle keeps the verse fixed for the local calendar day and changes it at midnight or when you return to the app.
+- **Recover unfinished edits** after a refresh or closed tab, with device-local text recovery and a “Keep draft & close” option. Photos still need to be saved or reattached.
+- **Reuse caption templates** across devices: save named structures with your caption, title, notes, type, and platforms.
+- **Move scheduled captions** by dragging them to another calendar day, or choose a caption and tap a destination on mobile or with a keyboard.
 - **Write captions** with a live character, word, and hashtag counter, plus warnings when a caption is too long for Instagram, TikTok, X, Threads, etc.
 - **Schedule them** with a date and time, a **content type** (Showcase, Relatable, Trend, Motivational, Feedbacks, Educational, Personal/Brand, Mini Quiz; editable in Settings), and **platforms**.
 - **Attach photos** (up to 10 per post). Paste, drag & drop or pick from your gallery. They're resized in your browser to max 2048 px so they fit the free database, and sent to you on Telegram at posting time. Videos aren't supported (too big for free storage), so paste a Drive link in the notes instead.
@@ -17,7 +20,50 @@ One place for all your social media captions: no more Google Docs, random notes,
   - send your bot `/today`, `/week`, or `/next` any time
 - **Make it yours** in Settings → Theme, including **Beach**: crystal-clear turquoise water, pearl seashells, warm sand, and a seaside caption-writing desk. Themes are saved per device.
 - Works great on your phone. You can "Add to Home Screen" so it feels like an app.
-- Protected by a password, and you can download a backup (JSON or CSV) any time.
+- Protected by a password, with portable JSON backup/restore (including photos and templates), plus CSV spreadsheet exports.
+
+## Planning tools
+
+### Unsaved-draft recovery
+
+The editor automatically keeps unfinished text and scheduling selections in this browser's local storage. After signing back in or reloading, use **Resume draft** in the recovery banner. Edits to an existing caption return to that caption, not a duplicate. You can keep separate unfinished edits for existing posts plus one new-caption draft (up to 50 recovery entries).
+
+- **Keep draft & close** closes the editor only after the device confirms the recovery copy was written. It does **not** save a post to the database or schedule reminders.
+- **Save** writes the caption to the server and clears its recovery copy. Closing and confirming **Discard** removes those unfinished edits, without deleting the previously saved caption.
+- Recovery includes title, caption, notes, content type, platforms, status, date/time, and reminder selection. **New photos, removals, and image order are not recovered.** Saved server photos remain attached; review attachments after restoring.
+- If the original caption changed, recovery warns before restoring over its latest version. If it was deleted, the banner offers to recover the text as a new caption.
+- Recovery is **device-local, not synced or encrypted**. It remains on this browser after logout, but the banner is only shown after login. On a shared device, discard recovery copies before leaving. Private browsing, cleared site data, disabled storage, or storage limits can prevent recovery; the editor reports failures and still lets you save normally.
+
+### Reusable templates
+
+Open **Reusable caption templates** in the caption editor. Give the current text a name and choose **Save current as template**. Templates sync with the application's database, so another signed-in device can use them after loading the app. There are up to 30 named templates; saving the same name offers to replace it.
+
+**Use template** copies its title, caption, notes, content type, and platforms into the editor (with confirmation before replacing text). It deliberately leaves the current date/time, photos, status, and reminders untouched. A template never publishes or schedules anything on its own. Deleting a template does not affect captions previously made from it. Version 2 JSON backups include templates and can bundle photos. CSV spreadsheets and older JSON exports contain caption records only; device-local recovery copies are never included.
+
+### Calendar rescheduling
+
+On desktop, drag an unposted calendar caption to another day. On touch devices or with a keyboard, choose a caption in the calendar's move controls, choose **Choose destination**, then tap a day or focus it and press Enter. Month navigation lets you select destinations in other months. Confirm the move, or cancel it without changing the post.
+
+Moves preserve the **device-local wall-clock posting time**, caption content, photos, status, and reminder offsets; reminders follow the new scheduled timestamp. The confirmation explicitly warns about dates in the past. Invalid daylight-saving times are rejected so they can be corrected in the editor. Posted/archived history cannot be moved. The server rejects stale-page conflicts instead of overwriting a newer change, and unsuccessful requests leave the saved schedule unchanged. As with the existing editor/calendar, posting dates display in the device's timezone; Telegram digest settings continue to use the configured reminder timezone.
+
+## Title icon personalization
+
+In **Settings → Personalize → Icon beside your title**, choose **Original theme icon**, **Choose an emoji**, or **Upload an image**. Preview changes before pressing **Save icon**. A custom choice syncs through the database and appears beside the signed-in studio title on other devices after reloading. **Use original theme icon** resets it to the current theme's original badge/ornament treatment, including themes that normally hide the badge.
+
+One emoji can include combined emoji such as families, flags, or skin-tone variants. Images can be PNG, JPG, WebP, or GIF up to 8 MB; the browser re-encodes them into a small, static 128 × 128 PNG with preserved transparency and contain-fit (no cropping). Only the bounded PNG is saved, not the original upload, filename, metadata, animation, or an external image URL. The existing badge size/shape, title layout, and theme design remain intact. The login screen, browser favicon, installed app icon, caption photos, and daily verse ornaments are unchanged. This is an app setting, so it is deliberately excluded from portable caption/photo/template backups.
+
+## Backup and restore
+
+Open **Settings → Your data** to download or restore a portable JSON backup.
+
+- **Download backup (JSON)** creates a version 2 Caption Studio file with saved captions, dates, statuses, notes, custom reminder offsets, posted/archive history, and reusable templates. **Include photos** is checked by default and embeds original image bytes in their saved order. Thumbnails are not duplicated; restored photos work through the existing thumbnail fallback. A text-only export records missing-photo counts and does not pretend those photos are recoverable. Photo-only captions need a photo-inclusive backup (or a title before a text-only export).
+- Select a JSON file to validate the **entire file** and preview counts, bundled/missing photos, duplicates, and templates. Selecting a file does not import anything. CSV is for spreadsheets, not restore. Older `{ exported_at, posts }` caption exports are supported with an explicit missing-photo warning; an old photo-only caption without a title/text cannot be recovered from metadata alone.
+- Restore is **additive**, never a database replacement: it creates missing captions with fresh database IDs, skips previously imported snapshots, and keeps existing captions. Source IDs plus creation/update timestamps recognize originals already in the same studio; fingerprints recognize previously restored snapshots across retries. Changed snapshots may be added as separate recovery copies rather than overwriting newer work. Repeated entries inside one file are skipped.
+- **Unposted captions restore as unscheduled drafts by default**, so they cannot trigger posting reminders. Original schedules/statuses require explicitly checking **Restore original schedules** and confirming a warning. That option can resend reminders already delivered elsewhere, including overdue reminders; review dates carefully. Posted and archived history retains its dates/status either way.
+- **Add missing templates** is optional and preserves existing same-named templates. The 30-template limit is checked before importing. Application settings, Telegram links/tokens, password/session secrets, sent-reminder history, theme selection, and device-local recovery drafts are deliberately excluded.
+- Each caption and its photos are saved in **one transactional D1 batch**. The overall file is imported incrementally to avoid large Worker transactions. If a request fails or the tab closes, already completed captions remain, the status reports partial progress, and selecting/retrying the **same file** resumes safely without duplicating those captions or photos. Canceling the confirmation makes no changes. Keep the tab open while exporting/importing.
+- Portable files are limited to **100 MB and 10,000 captions**, with the existing 10-photo/per-caption and resized-image size limits. Oversized exports fail explicitly rather than downloading a truncated/unrestorable file. For larger photo collections, use a text-only backup and download photos separately; this portable workflow is not a substitute for a full Cloudflare D1 database backup.
+- Backup files contain **private, unencrypted** caption/photo data. Store them somewhere safe and only restore files you trust. Exports are assembled in your browser; no third-party backup service receives them.
 
 ## 💸 Cost: free
 

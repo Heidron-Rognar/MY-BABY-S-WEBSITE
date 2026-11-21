@@ -101,6 +101,14 @@
         <a class="daily-source" href="https://worldenglish.bible/" target="_blank" rel="noopener noreferrer">World English Bible · Public domain ↗</a>
       </section>
 
+      <section id="recovery-banner" class="planning-panel recovery-banner" aria-label="Unsaved draft recovery" hidden>
+        <div><strong>Pick up where you left off</strong><p class="muted small">Unfinished edits saved on this device. New photos must be reattached.</p></div>
+        <label class="sr-only" for="recovery-choice">Draft to recover</label>
+        <select id="recovery-choice"></select>
+        <button type="button" class="btn btn-primary btn-sm" id="recover-draft">Resume draft</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="discard-draft">Discard</button>
+      </section>
+
       <div id="type-filter" class="filter-row" aria-label="Filter by content type"></div>
 
       <main id="view" class="view" tabindex="-1"></main>
@@ -123,6 +131,22 @@
         </header>
 
         <div class="editor-body">
+          <details class="template-tools planning-panel">
+            <summary>Reusable caption templates</summary>
+            <p class="muted small">Synced across your devices. Includes text, notes, type and platforms—not dates, photos, status or reminders.</p>
+            <div class="planning-actions">
+              <label for="template-choice" class="sr-only">Saved template</label>
+              <select id="template-choice"></select>
+              <button type="button" class="btn btn-ghost btn-sm" id="apply-template">Use template</button>
+              <button type="button" class="btn btn-danger-ghost btn-sm" id="delete-template">Delete template</button>
+            </div>
+            <div class="planning-actions">
+              <label for="template-name" class="sr-only">Template name</label>
+              <input id="template-name" class="input" maxlength="80" placeholder="Template name, e.g. Product showcase" />
+              <button type="button" class="btn btn-ghost btn-sm" id="save-template">Save current as template</button>
+            </div>
+          </details>
+          <div class="draft-tools"><span id="draft-save-status" class="muted small" role="status">Recovery saves text on this device, not photos.</span><button type="button" class="btn btn-ghost btn-sm" id="keep-draft">Keep draft &amp; close</button></div>
           <input id="f-title" class="title-input" type="text" maxlength="200" placeholder="Short name (optional) — e.g. “Beach day reel”" />
 
           <div class="caption-wrap">

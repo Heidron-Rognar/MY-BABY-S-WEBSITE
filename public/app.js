@@ -1,4 +1,7 @@
 // Caption Studio — front-end (no build step, plain JS)
+import { RECOVERY_KEY, cleanDraft, draftKey, readDrafts, writeDrafts, moveToLocalDay } from "./planning-tools.js";
+import { applyBrandIcon, initBrandIconControls } from "./branding.js";
+import { initBackupTools } from "./backup-ui.js";
 import { initDailyInspiration } from "./daily-inspiration.js";
 
 let dailyInspiration;
@@ -322,6 +325,7 @@ async function boot() {
   else dailyInspiration.refresh();
   applyBranding();
   await loadPosts();
+  renderRecoveryBanner();
   route();
 }
 
@@ -345,6 +349,7 @@ function applyBranding() {
   const name = state.settings?.app_name || "Caption Studio";
   $("#brand-name").textContent = name;
   document.title = name;
+  applyBrandIcon($(".topbar .brand-mark"), state.settings?.brand_icon);
 }
 
 async function loadPosts() {
@@ -385,6 +390,7 @@ function route() {
     return;
   }
   const nextView = ["upcoming", "calendar", "ideas", "posted", "settings"].includes(hash) ? hash : "upcoming";
+  if (nextView !== "calendar") { movePostId = null; clearCalendarDrag(); }
   if (nextView !== state.view) state.selected.clear();
   state.view = nextView;
   render();
@@ -735,7 +741,7 @@ function renderCalendar(view) {
       .slice(0, 3)
       .map(
         (p) =>
-          `<span class="cal-item ${p.status === "posted" ? "posted" : ""}" style="--type-color:${typeColor(p.content_type)}" data-id="${p.id}">${esc(
+          `<span class="cal-item ${p.status === "posted" ? "posted" : ""}" style="--type-color:${typeColor(p.content_type)}" data-id="${p.id}" draggable="${p.status !== "posted"}" title="${p.status === "posted" ? "Posted caption" : "Drag to another day to reschedule"}">${esc(
             fmtTime(new Date(p.scheduled_at)).replace(/\s?([AP])M/i, (_, a) => a.toLowerCase())
           )} ${esc(p.title || p.content_type || p.caption.slice(0, 30))}</span>`
       )
@@ -766,9 +772,93 @@ function renderCalendar(view) {
       <button class="icon-btn" data-cal="-1" aria-label="Previous month"><svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4-4.6-4.6z"/></svg></button>
       <button class="icon-btn" data-cal="1" aria-label="Next month"><svg viewBox="0 0 24 24"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg></button>
     </div>
-    <div class="cal">${dows}${cells}</div>
+    <section class="planning-panel calendar-move" aria-label="Move a scheduled caption" aria-busy="${calendarMoveBusy}">
+      <p class="small" id="calendar-move-help" role="status">${calendarMoveBusy ? "Moving caption…" : movePostId ? "Choose a destination day below. Press Enter or tap a day to move your caption." : "Drag an unposted caption to a day, or choose one here and then tap a destination. Posting times use this device’s time zone."}</p>
+      <label for="calendar-move-choice" class="sr-only">Caption to move</label>
+      <select id="calendar-move-choice" ${calendarMoveBusy ? "disabled" : ""} aria-describedby="calendar-move-help">
+        <option value="">Choose a scheduled caption</option>
+        ${state.posts.filter((p) => p.scheduled_at && p.status !== "posted" && !p.archived_at).map((p) => `<option value="${p.id}" ${movePostId === p.id ? "selected" : ""}>${esc(p.title || p.content_type || p.caption.slice(0, 35) || "Untitled")} · ${esc(fmtDate(new Date(p.scheduled_at)))}</option>`).join("")}
+      </select>
+      <button type="button" class="btn btn-primary btn-sm" id="calendar-start-move" ${calendarMoveBusy ? "disabled" : ""}>Choose destination</button>
+      ${movePostId ? '<button type="button" class="btn btn-ghost btn-sm" id="calendar-cancel-move">Cancel move</button>' : ""}
+    </section>
+    <div class="cal" aria-describedby="calendar-move-help">${dows}${cells}</div>
     ${panel}`;
 }
+
+/* Desktop drag/drop plus a tap/keyboard path using the same calendar day buttons. */
+let dragPostId = null;
+let movePostId = null;
+let calendarMoveBusy = false;
+
+async function rescheduleFromCalendar(id, day) {
+  if (calendarMoveBusy) return;
+  const post = state.posts.find((p) => p.id === Number(id));
+  if (!post || post.status === "posted" || post.archived_at || !post.scheduled_at) return toast("Only scheduled, unposted captions can be moved", "error");
+  let scheduledAt;
+  try { scheduledAt = moveToLocalDay(post.scheduled_at, day); }
+  catch (err) { return toast(err.message, "error"); }
+  if (scheduledAt === post.scheduled_at) { movePostId = null; render(); return; }
+  const target = new Date(scheduledAt);
+  const past = target < new Date() ? "\nThis is in the past; due reminders may be sent on the next reminder check." : "";
+  if (!confirm(`Move “${post.title || post.content_type || "Untitled caption"}” to ${fmtDate(target)}, ${fmtTime(target)}?\nThe local posting time and reminder offsets will be kept. Reminders will follow the new date.${past}`)) return;
+  calendarMoveBusy = true;
+  render();
+  try {
+    const { post: moved } = await api(`/api/posts/${post.id}/reschedule`, { method: "POST", body: { scheduled_at: scheduledAt, expected_updated_at: post.updated_at } });
+    upsertLocal(moved);
+    state.calSelected = day;
+    movePostId = null;
+    toast("Caption moved — reminders follow the new date");
+  } catch (err) {
+    toast(err.message, "error");
+    try { await loadPosts(); } catch { /* Keep the unchanged calendar if offline. */ }
+  } finally {
+    calendarMoveBusy = false;
+    render();
+  }
+}
+const calendarView = $("#view");
+calendarView.addEventListener("click", (event) => {
+  if (event.target.closest("#calendar-start-move")) {
+    const value = $("#calendar-move-choice")?.value;
+    if (!value) return toast("Choose a caption to move first", "error");
+    movePostId = Number(value); render();
+    ($(".cal-cell.selected") || $(".cal-cell.today") || $(".cal-cell"))?.focus();
+  }
+  if (event.target.closest("#calendar-cancel-move")) { movePostId = null; render(); }
+});
+calendarView.addEventListener("dragstart", (event) => {
+  const item = event.target.closest('.cal-item[draggable="true"]');
+  if (!item || calendarMoveBusy) return;
+  dragPostId = Number(item.dataset.id);
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", String(dragPostId));
+  item.classList.add("drag-source");
+});
+calendarView.addEventListener("dragover", (event) => {
+  const day = event.target.closest(".cal-cell");
+  if (!day || !dragPostId || calendarMoveBusy) return;
+  event.preventDefault(); event.dataTransfer.dropEffect = "move";
+  $$(".drop-target", calendarView).forEach((el) => el.classList.remove("drop-target"));
+  day.classList.add("drop-target");
+});
+calendarView.addEventListener("dragleave", (event) => {
+  const day = event.target.closest(".cal-cell");
+  if (day && !day.contains(event.relatedTarget)) day.classList.remove("drop-target");
+});
+function clearCalendarDrag() {
+  dragPostId = null;
+  $$(".drop-target, .drag-source", calendarView).forEach((el) => el.classList.remove("drop-target", "drag-source"));
+}
+calendarView.addEventListener("dragend", clearCalendarDrag);
+calendarView.addEventListener("drop", (event) => {
+  const day = event.target.closest(".cal-cell");
+  if (!day || !dragPostId) return;
+  event.preventDefault();
+  const id = dragPostId; clearCalendarDrag();
+  void rescheduleFromCalendar(id, day.dataset.day);
+});
 
 /* ---------- global click handling for views ---------- */
 
@@ -791,6 +881,9 @@ $("#view").addEventListener("click", async (e) => {
     if (v === "today") state.calSelected = dayKey(new Date());
     return render();
   }
+  const destination = e.target.closest(".cal-cell");
+  if (destination && calendarMoveBusy) return;
+  if (destination && movePostId) return rescheduleFromCalendar(movePostId, destination.dataset.day);
   const calItem = e.target.closest(".cal-item");
   if (calItem && window.matchMedia("(min-width: 641px)").matches) {
     const post = state.posts.find((p) => p.id === Number(calItem.dataset.id));
@@ -928,7 +1021,141 @@ let edRemovedImages = [];
 let lightboxIndex = -1;
 let pendingKey = 0;
 
-function openEditor(post, { day = null, ideas = false } = {}) {
+/* ---------- local unsaved-edit recovery ---------- */
+function recoveryStorage() { try { return window.localStorage; } catch { return null; } }
+let recoveryDrafts = readDrafts(recoveryStorage());
+let activeRecoveryKey = "new";
+let recoveryImageWarning = false;
+let savingPost = false;
+
+function renderRecoveryBanner() {
+  const entries = Object.entries(recoveryDrafts).sort((a, b) => b[1].updatedAt.localeCompare(a[1].updatedAt));
+  $("#recovery-banner").hidden = !entries.length || !state.settings;
+  $("#recovery-choice").innerHTML = entries.map(([key, d]) => `<option value="${esc(key)}">${esc(d.title || d.caption.slice(0, 45) || "Untitled draft")}${d.postId ? " (unfinished edits)" : " (new caption)"}</option>`).join("");
+}
+function forgetRecovery(key) {
+  recoveryDrafts = readDrafts(recoveryStorage());
+  delete recoveryDrafts[key];
+  writeDrafts(recoveryStorage(), recoveryDrafts);
+  renderRecoveryBanner();
+}
+function captureRecovery() {
+  if (!editor.open || savingPost) return false;
+  const status = $("#draft-save-status");
+  if (editorSignature() === state.editorSnapshot) {
+    forgetRecovery(activeRecoveryKey);
+    status.textContent = "No unsaved edits. Recovery saves text, not photos.";
+    return true;
+  }
+  recoveryDrafts = readDrafts(recoveryStorage());
+  const previous = recoveryDrafts[activeRecoveryKey];
+  const draft = cleanDraft({
+    postId: state.editing?.id || previous?.postId || null,
+    sourceUpdatedAt: state.editing?.updated_at || "", updatedAt: new Date().toISOString(),
+    title: ed.title.value, caption: ed.caption.value, notes: ed.notes.value,
+    date: ed.date.value, time: ed.time.value, content_type: edType, platforms: edPlatforms,
+    status: edStatus, reminder_offsets: edReminders,
+    imagesNotRecovered: recoveryImageWarning || edImages.some((i) => i.pending) || edRemovedImages.length > 0,
+  });
+  const next = { ...recoveryDrafts, [activeRecoveryKey]: draft };
+  const success = Object.keys(next).length <= 50 && writeDrafts(recoveryStorage(), next);
+  if (success) recoveryDrafts = next;
+  status.textContent = success ? "Unfinished edits saved on this device. Photo changes are not recovered." : "Recovery unavailable (storage blocked or full). Save this caption before leaving.";
+  renderRecoveryBanner();
+  return success;
+}
+function restoreEditorDraft(draft) {
+  ed.title.value = draft.title; ed.caption.value = draft.caption; ed.notes.value = draft.notes;
+  ed.date.value = draft.date; ed.time.value = draft.time;
+  edType = draft.content_type; edPlatforms = [...draft.platforms];
+  edStatus = state.editing || !draft.postId ? draft.status : "draft";
+  edReminders = draft.reminder_offsets;
+  recoveryImageWarning = draft.imagesNotRecovered;
+  $("#notes-details").open = Boolean(draft.notes);
+  renderEditorChips(); updateCaptionStats(); updateReminderPreview(); autoGrow();
+  $("#draft-save-status").textContent = "Draft restored. Photo changes were not restored; check attachments before saving.";
+}
+$("#recover-draft").addEventListener("click", () => {
+  const draft = recoveryDrafts[$("#recovery-choice").value];
+  if (!draft) return;
+  const post = state.posts.find((p) => p.id === draft.postId) || null;
+  if (draft.postId && !post && !confirm("The original caption is no longer available. Recover its text as a new caption?")) return;
+  openEditor(post, { draft });
+});
+$("#discard-draft").addEventListener("click", () => {
+  const key = $("#recovery-choice").value;
+  if (key && confirm("Permanently discard this device's unfinished edits? Saved captions are not deleted.")) forgetRecovery(key);
+});
+$("#keep-draft").addEventListener("click", () => {
+  if (captureRecovery()) closeEditor(true, true);
+  else toast("Could not keep a recovery copy. Save the caption instead.", "error");
+});
+for (const event of ["input", "change", "click"]) form.addEventListener(event, () => queueMicrotask(captureRecovery));
+window.addEventListener("pagehide", captureRecovery);
+window.addEventListener("storage", (event) => {
+  if (event.key === RECOVERY_KEY || event.key === null) {
+    recoveryDrafts = readDrafts(recoveryStorage());
+    renderRecoveryBanner();
+  }
+});
+document.addEventListener("visibilitychange", () => { if (document.hidden) captureRecovery(); });
+window.addEventListener("beforeunload", (event) => {
+  if (editor.open && editorSignature() !== state.editorSnapshot) {
+    captureRecovery();
+    event.preventDefault(); event.returnValue = "";
+  }
+});
+
+/* ---------- shared caption templates ---------- */
+function renderTemplateOptions() {
+  const templates = state.settings.caption_templates || [];
+  $("#template-choice").innerHTML = `<option value="">${templates.length ? "Choose a saved template" : "No saved templates yet"}</option>` + templates.map((t, i) => `<option value="${i}">${esc(t.name)}</option>`).join("");
+  $("#apply-template").disabled = $("#delete-template").disabled = !templates.length;
+}
+let savingTemplate = false;
+async function updateTemplates(templates) {
+  if (savingTemplate) return false;
+  savingTemplate = true;
+  const buttons = [$("#save-template"), $("#delete-template")];
+  buttons.forEach((b) => b.disabled = true);
+  try { return await saveSettings({ caption_templates: templates }, "Templates saved"); }
+  finally { savingTemplate = false; buttons.forEach((b) => b.disabled = false); renderTemplateOptions(); }
+}
+$("#save-template").addEventListener("click", async () => {
+  const name = $("#template-name").value.trim();
+  if (!name) return toast("Give this template a name first", "error");
+  if (!ed.title.value.trim() && !ed.caption.value.trim()) return toast("Add a title or caption first", "error");
+  const templates = [...(state.settings.caption_templates || [])];
+  const index = templates.findIndex((t) => t.name.toLowerCase() === name.toLowerCase());
+  if (index >= 0 && !confirm(`Replace the template “${name}”?`)) return;
+  if (index < 0 && templates.length >= 30) return toast("You can save up to 30 templates. Delete one first.", "error");
+  const template = { name, title: ed.title.value, caption: ed.caption.value, notes: ed.notes.value, content_type: edType, platforms: [...edPlatforms] };
+  if (index >= 0) templates[index] = template; else templates.push(template);
+  if (await updateTemplates(templates)) $("#template-name").value = "";
+});
+$("#apply-template").addEventListener("click", () => {
+  const selected = $("#template-choice").value;
+  const template = selected === "" ? null : state.settings.caption_templates?.[Number(selected)];
+  if (!template) return toast("Choose a template first", "error");
+  if ((ed.title.value || ed.caption.value || ed.notes.value) && !confirm("Replace the current title, caption, notes, type and platforms? The date, photos, status and reminders will stay unchanged.")) return;
+  ed.title.value = template.title; ed.caption.value = template.caption; ed.notes.value = template.notes;
+  edType = template.content_type; edPlatforms = [...template.platforms];
+  $("#notes-details").open = Boolean(template.notes);
+  renderEditorChips(); updateCaptionStats(); autoGrow(); captureRecovery();
+  toast("Template applied — edit it and save when ready");
+});
+$("#delete-template").addEventListener("click", async () => {
+  const selected = $("#template-choice").value;
+  if (selected === "") return toast("Choose a template first", "error");
+  const templates = state.settings.caption_templates || [];
+  if (confirm(`Delete the template “${templates[Number(selected)].name}”? Captions made from it are kept.`)) await updateTemplates(templates.filter((_, i) => i !== Number(selected)));
+});
+
+function openEditor(post, { day = null, ideas = false, draft = null } = {}) {
+  draft ||= recoveryDrafts[draftKey(post?.id)] || null;
+  if (draft && draft.sourceUpdatedAt && post && draft.sourceUpdatedAt !== post.updated_at && !confirm("This caption has changed since these unfinished edits. Restore them over the latest text? Review carefully before saving.")) return;
+  activeRecoveryKey = draft ? draftKey(draft.postId) : draftKey(post?.id);
+  recoveryImageWarning = false;
   state.editing = post;
   $("#editor-title").textContent = post ? "Edit caption" : "New caption";
   $("#delete-btn").hidden = !post;
@@ -966,6 +1193,10 @@ function openEditor(post, { day = null, ideas = false } = {}) {
   updateCaptionStats();
   updateReminderPreview();
   state.editorSnapshot = editorSignature();
+  renderTemplateOptions();
+  $("#template-name").value = "";
+  $("#draft-save-status").textContent = "Recovery saves text on this device, not photos.";
+  if (draft) restoreEditorDraft(draft);
   if (!editor.open) editor.showModal();
   requestAnimationFrame(() => {
     autoGrow();
@@ -1186,8 +1417,10 @@ function editorPayload() {
   };
 }
 
-function closeEditor(force = false) {
+function closeEditor(force = false, keepRecovery = false) {
+  if (savingPost && !force) return toast("Please wait for this caption to finish saving", "error");
   if (!force && editorSignature() !== state.editorSnapshot && !confirm("Discard your unsaved changes?")) return;
+  if (!keepRecovery) forgetRecovery(activeRecoveryKey);
   editor.close();
   state.editing = null;
   closeLightbox();
@@ -1206,6 +1439,9 @@ form.addEventListener("submit", async (e) => {
   const buttons = $$('button[type="submit"]', form);
   const setLabel = (t) => buttons.forEach((b) => (b.textContent = t));
   buttons.forEach((b) => (b.disabled = true));
+  savingPost = true;
+  form.inert = true;
+  form.setAttribute("aria-busy", "true");
   const wasEditing = Boolean(state.editing);
   let saved = null;
   try {
@@ -1215,6 +1451,8 @@ form.addEventListener("submit", async (e) => {
       : await api("/api/posts", { method: "POST", body: payload });
     const btnRect = (e.submitter || buttons[0]).getBoundingClientRect();
     saved = res.post;
+    forgetRecovery(activeRecoveryKey);
+    activeRecoveryKey = draftKey(saved.id);
     state.editing = saved; // from now on, retries update this post instead of creating a new one
     upsertLocal(saved);
     await syncImages(saved.id, setLabel);
@@ -1238,6 +1476,10 @@ form.addEventListener("submit", async (e) => {
       render();
     }
   } finally {
+    savingPost = false;
+    form.inert = false;
+    form.removeAttribute("aria-busy");
+    captureRecovery();
     setLabel("Save");
     buttons.forEach((b) => (b.disabled = false));
   }
@@ -1282,6 +1524,7 @@ function imgSrc(img, thumb = true) {
 }
 
 function renderEditorImages() {
+  if (editor.open) queueMicrotask(captureRecovery);
   const grid = $("#f-images");
   grid.innerHTML =
     edImages
@@ -1507,6 +1750,9 @@ form.addEventListener("click", async (e) => {
   }
   if (action === "duplicate" && state.editing) {
     const copy = editorPayload();
+    captureRecovery();
+    if (recoveryDrafts.new && !confirm("Replace the other unfinished new-caption draft on this device with this copy?")) return;
+    activeRecoveryKey = "new";
     state.editing = null;
     $("#editor-title").textContent = "New caption (copy)";
     $("#delete-btn").hidden = true;
@@ -1652,6 +1898,16 @@ async function renderSettings(view) {
       <div class="settings-grid">
         <label class="field"><span>Website name</span><input id="app-name" maxlength="60" value="${esc(s.app_name)}" /></label>
       </div>
+      <div id="brand-icon-controls" class="brand-icon-controls" aria-busy="false">
+        <h3>Icon beside your title</h3>
+        <p class="muted small">Keep your theme’s original design, choose one emoji, or upload an image. Your choice syncs across devices after saving. The login screen and app icon stay unchanged.</p>
+        <div class="brand-icon-row"><span id="brand-icon-preview" class="brand-mark" aria-hidden="true">✍️</span><span class="small muted">Title badge preview</span></div>
+        <label class="field"><span>Icon style</span><select id="brand-icon-mode"><option value="theme">Original theme icon</option><option value="emoji">Choose an emoji</option><option value="image">Upload an image</option></select></label>
+        <label class="field" id="brand-emoji-field" hidden><span>Emoji</span><input id="brand-icon-emoji" type="text" maxlength="40" autocomplete="off" spellcheck="false" aria-describedby="brand-icon-status" /><span class="small muted">Paste an emoji or use your device’s emoji keyboard.</span></label>
+        <label class="field" id="brand-image-field" hidden><span>Title image</span><input id="brand-icon-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-describedby="brand-icon-status" /><span class="small muted">PNG, JPG, WebP or GIF, up to 8 MB. Resized to a small 128 px static PNG without cropping; transparency is preserved.</span></label>
+        <div class="row"><button type="button" id="save-brand-icon" class="btn btn-primary">Save icon</button><button type="button" id="reset-brand-icon" class="btn btn-ghost">Use original theme icon</button></div>
+        <p id="brand-icon-status" class="small muted" role="status">Preview changes here, then save to apply.</p>
+      </div>
     </section>
 
     <section class="panel">
@@ -1662,9 +1918,21 @@ async function renderSettings(view) {
 
     <section class="panel">
       <h2>💾 Your data</h2>
-      <p class="muted">Download a backup of every caption (images aren't included — download them from each post).</p>
+      <div id="backup-tools" aria-busy="false">
+        <p class="muted">Download a portable JSON backup of captions, photos and templates. Restore adds missing captions—never replaces or deletes existing work. Files are private and unencrypted. Limit: 100 MB per file.</p>
+        <label class="check"><input type="checkbox" id="backup-photos" checked /> Include photos in the backup</label>
+        <div class="row"><button type="button" class="btn btn-ghost" id="export-json">Download backup (JSON)</button></div>
+        <label class="field"><span>Restore from a Caption Studio JSON backup</span><input id="restore-file" type="file" accept=".json,application/json" aria-describedby="backup-status" /></label>
+        <div id="restore-preview" class="planning-panel" hidden>
+          <h3>Restore preview</h3>
+          <p id="restore-summary"></p><p id="restore-warning" class="muted small"></p>
+          <label class="check"><input type="checkbox" id="restore-schedules" /> Restore original schedules for unposted captions (can trigger reminders)</label>
+          <label class="check"><input type="checkbox" id="restore-templates" checked /> Add missing templates; keep existing same-named templates</label>
+          <button type="button" class="btn btn-primary" id="restore-backup" disabled>Confirm restore</button>
+        </div>
+        <p id="backup-status" class="small" role="status" aria-live="polite">Choose a backup file to validate and preview before importing. No data is changed just by selecting a file.</p>
+      </div>
       <div class="row">
-        <button class="btn btn-ghost" id="export-json">Download backup (JSON)</button>
         <button class="btn btn-ghost" id="export-csv">Download spreadsheet (CSV)</button>
         <span class="spacer"></span>
         <button class="btn btn-danger-ghost" id="logout">Log out</button>
@@ -1815,6 +2083,7 @@ function bindSettings() {
   $("#nudge").addEventListener("change", (e) => saveSettings({ nudge_unposted: e.target.checked }));
   $("#digest-empty").addEventListener("change", (e) => saveSettings({ digest_when_empty: e.target.checked }));
   $("#app-name").addEventListener("change", (e) => saveSettings({ app_name: e.target.value }));
+  initBrandIconControls({ setting: state.settings.brand_icon, save: (brand_icon) => saveSettings({ brand_icon }, "Title icon saved") });
   $("#theme-grid").addEventListener("click", (e) => {
     const card = e.target.closest("[data-theme-id]");
     if (!card || card.dataset.themeId === currentTheme()) return;
@@ -1825,9 +2094,12 @@ function bindSettings() {
     toast(`Theme: ${THEMES.find((t) => t.id === currentTheme()).name}`);
   });
 
-  $("#export-json").addEventListener("click", () => {
-    download(`captions-${dayKey(new Date())}.json`, JSON.stringify({ exported_at: new Date().toISOString(), posts: state.posts }, null, 2), "application/json");
-  });
+  initBackupTools({ api, download, onRestored: async () => {
+    state.settings = (await api("/api/settings")).settings;
+    await loadPosts();
+    if (state.view === "settings") renderStorage();
+    else render();
+  } });
   $("#export-csv").addEventListener("click", () => {
     const cols = ["id", "title", "caption", "content_type", "platforms", "scheduled_at", "status", "notes", "created_at", "archived_at"];
     const cell = (v) => `"${String(Array.isArray(v) ? v.join(", ") : v ?? "").replace(/"/g, '""')}"`;

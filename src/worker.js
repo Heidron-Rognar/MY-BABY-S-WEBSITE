@@ -7,6 +7,9 @@
  *  • Cron job that sends posting reminders + a daily digest to Telegram
  */
 
+import { exportBackupPost, restoreBackupPost, readBackupBody } from "./backup.js";
+import { validateBackupPost, validateBackupTemplates } from "../public/backup.js";
+import { validateBrandIcon } from "../public/branding.js";
 import { Buffer } from "node:buffer";
 import {
   DEFAULT_SETTINGS,
@@ -90,6 +93,9 @@ function ensureSchema(env) {
         if (!cols.has("archived_at")) {
           await env.DB.prepare("ALTER TABLE posts ADD COLUMN archived_at TEXT").run();
         }
+        if (!cols.has("restore_key")) await env.DB.prepare("ALTER TABLE posts ADD COLUMN restore_key TEXT").run();
+        if (!cols.has("restore_token")) await env.DB.prepare("ALTER TABLE posts ADD COLUMN restore_token TEXT").run();
+        await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_restore_key ON posts(restore_key)").run();
         // One-time switch to the new default content types (later edits in Settings are kept).
         const ver = await env.DB.prepare("SELECT value FROM settings WHERE key = 'content_types_version'").first();
         if (!ver || Number(JSON.parse(ver.value)) < CONTENT_TYPES_VERSION) {
@@ -140,8 +146,9 @@ function parseJson(value, fallback) {
 
 function rowToPost(row, images = []) {
   const reminder_offsets = parseJson(row.reminder_offsets, null);
+  const { restore_key, restore_token, ...publicRow } = row;
   return {
-    ...row,
+    ...publicRow,
     platforms: parseJson(row.platforms, []),
     reminder_offsets: Array.isArray(reminder_offsets) ? reminder_offsets : null,
     images,
@@ -678,6 +685,47 @@ async function handleApi(request, env, url) {
     return json({ ok: true, settings: publicSettings(settings), statuses: STATUSES });
   }
 
+  /* ---------- portable backups (additive restore, never delete/replace) ---------- */
+  if (path === "/api/backup/info" && method === "GET") {
+    const { results } = await env.DB.prepare("SELECT id, created_at, updated_at, restore_key FROM posts ORDER BY id").all();
+    const settings = await getSettings(env);
+    return json({ posts: results, templates: settings.caption_templates });
+  }
+  const backupPost = path.match(/^\/api\/backup\/posts\/(\d+)$/);
+  if (backupPost && method === "GET") {
+    const post = await exportBackupPost(env.DB, Number(backupPost[1]));
+    return post ? json({ post }) : error("A caption changed or was deleted during backup. Please export again.", 409);
+  }
+  if (path === "/api/backup/restore-post" && method === "POST") {
+    let body, post;
+    try { body = await readBackupBody(request); post = validateBackupPost(body?.post); }
+    catch (err) { return error(err.message, err.message.includes("too large") ? 413 : 400); }
+    try { return json(await restoreBackupPost(env.DB, post, body.keep_schedule === true)); }
+    catch (err) {
+      if (/maximum DB size|SQLITE_FULL|database or disk is full/i.test(String(err.message))) return error("Storage is full. Free up photo storage, then retry the same backup.", 507);
+      throw err;
+    }
+  }
+  if (path === "/api/backup/restore-templates" && method === "POST") {
+    let body, templates;
+    try { body = await readBackupBody(request, 1000000); templates = validateBackupTemplates(body?.templates); }
+    catch (err) { return error(err.message); }
+    const current = (await getSettings(env)).caption_templates;
+    const names = new Set(current.map((t) => t.name.toLowerCase()));
+    const additions = templates.filter((t) => !names.has(t.name.toLowerCase()));
+    if (current.length + additions.length > 30) return error("Not enough template slots. Restore without templates, or delete unused templates first.", 409);
+    if (additions.length) {
+      // Compare-and-swap prevents a restore from overwriting a concurrent template edit.
+      const raw = await env.DB.prepare("SELECT value FROM settings WHERE key = 'caption_templates'").first();
+      if (raw && JSON.stringify(JSON.parse(raw.value)) !== JSON.stringify(current)) return error("Templates changed. Retry the restore.", 409);
+      const row = await env.DB.prepare(
+        "INSERT INTO settings (key, value) VALUES ('caption_templates', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE settings.value = ? RETURNING key"
+      ).bind(JSON.stringify([...current, ...additions]), raw?.value ?? "[]").first();
+      if (!row) return error("Templates changed. Retry the restore.", 409);
+    }
+    return json({ added: additions.length, skipped: templates.length - additions.length });
+  }
+
   /* ---------- posts ---------- */
   if (path === "/api/posts" && method === "GET") {
     const { results } = await env.DB.prepare(
@@ -740,6 +788,25 @@ async function handleApi(request, env, url) {
       updated = results.reduce((n, r) => n + (r.meta?.changes ?? 0), 0);
     }
     return json({ ok: true, updated });
+  }
+
+  // Calendar moves only change the schedule. Protect against stale tabs and posted history.
+  const moveMatch = path.match(/^\/api\/posts\/(\d+)\/reschedule$/);
+  if (moveMatch && method === "POST") {
+    const id = Number(moveMatch[1]);
+    const body = (await readJson(request)) || {};
+    const existing = await getPost(env, id);
+    if (!existing) return error("Post not found", 404);
+    if (existing.status === "posted" || existing.archived_at) return error("Posted or archived captions cannot be moved", 409);
+    if (!existing.scheduled_at) return error("Schedule this caption in the editor first", 409);
+    if (body.expected_updated_at !== existing.updated_at) return error("This caption changed. Refresh the calendar and try again.", 409);
+    const input = normalizePostInput({ ...existing, scheduled_at: body.scheduled_at, has_images: existing.images.length > 0 });
+    if (input.error || !body.scheduled_at || !input.value.scheduled_at) return error("Choose a valid scheduled date");
+    const row = await env.DB.prepare(
+      "UPDATE posts SET scheduled_at = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND status != 'posted' AND archived_at IS NULL RETURNING *"
+    ).bind(input.value.scheduled_at, new Date(Math.max(Date.now(), Date.parse(existing.updated_at) + 1)).toISOString(), id, existing.updated_at).first();
+    if (!row) return error("This caption changed. Refresh the calendar and try again.", 409);
+    return json({ post: rowToPost(row, existing.images) });
   }
 
   const postMatch = path.match(/^\/api\/posts\/(\d+)$/);
@@ -911,6 +978,8 @@ async function handleApi(request, env, url) {
     const current = await getSettings(env);
     const allowed = [
       "app_name",
+      "brand_icon",
+      "caption_templates",
       "content_types",
       "platforms",
       "reminder_offsets",
@@ -922,6 +991,10 @@ async function handleApi(request, env, url) {
     ];
     const patch = {};
     for (const k of allowed) if (k in body) patch[k] = body[k];
+    if ("brand_icon" in patch) {
+      try { patch.brand_icon = validateBrandIcon(patch.brand_icon); }
+      catch (err) { return error(err.message); }
+    }
     const next = normalizeSettings({ ...current, ...patch });
     if (patch.timezone && next.timezone !== patch.timezone) return error("Unknown time zone");
     const toSave = {};
