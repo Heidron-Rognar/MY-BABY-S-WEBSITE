@@ -920,3 +920,20 @@ svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
 [data-theme="matcha"] .card-check[aria-checked="true"]::after { border-color: #fbf8ef; }
 [data-theme="matcha"] .card.selected { box-shadow: 0 0 0 2px var(--accent), 0 3px 0 -1px var(--surface), 0 3px 0 0 var(--line), 0 6px 0 -1px var(--surface), 0 6px 0 0 var(--line); }
 [data-theme="matcha"] .bulk-bar { border-radius: 10px; font-style: italic; }
+
+/* Matcha: soft watercolor matcha illustration pinned in the background.
+   multiply = the image's white disappears into the cream paper.
+   Cards become slightly translucent "thin paper" so it peeks through. */
+[data-theme="matcha"] body::before {
+  content: ""; position: fixed; z-index: 0; pointer-events: none;
+  left: max(4px, calc(50vw - 490px - 300px)); bottom: 6px;
+  width: 360px; aspect-ratio: 672 / 628;
+  background: url("/matcha-bg.webp") center / contain no-repeat;
+  mix-blend-mode: multiply; opacity: 0.7;
+}
+[data-theme="matcha"] .app, [data-theme="matcha"] .login { position: relative; z-index: 1; }
+[data-theme="matcha"] .card { background: color-mix(in srgb, var(--surface) 72%, transparent); }
+@media (max-width: 640px) {
+  [data-theme="matcha"] body::before { width: 250px; left: 4px; bottom: 4px; opacity: 0.6; }
+}
+@media print { [data-theme="matcha"] body::before { display: none; } }
