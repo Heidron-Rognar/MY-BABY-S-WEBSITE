@@ -22,11 +22,13 @@ One place for all your social media captions: no more Google Docs, random notes,
 | Piece | Service | Free plan |
 | --- | --- | --- |
 | Website + API | Cloudflare Workers | 100,000 requests/day |
-| Database (captions + photos) | Cloudflare D1 | 5 GB storage, roughly 5,000+ resized photos |
+| Database (captions + photos) | Cloudflare D1 | 500 MB per database: unlimited captions, roughly 400–800 photos |
 | Reminder schedule | Cloudflare Cron Triggers | runs every 5 minutes |
 | Notifications | Telegram Bot API | free |
 
-You don't need a credit card. Personal use stays far below these limits.
+You don't need a credit card. On the free plan there's **no way to get billed**: if a limit is ever reached, that feature just pauses (for example, photo uploads say "storage is full") until you free up space or the daily limit resets.
+
+**About photos:** the free database is capped at 500 MB, and photos fill most of it (captions are tiny). **Settings → Photo storage** shows how full it is and can remove photos from posts you posted more than 30 days ago (the captions stay).
 
 ---
 

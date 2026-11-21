@@ -7,6 +7,7 @@
  *  • Cron job that sends posting reminders + a daily digest to Telegram
  */
 
+import { Buffer } from "node:buffer";
 import {
   DEFAULT_SETTINGS,
   normalizeSettings,
@@ -71,9 +72,9 @@ function ensureSchema(env) {
         width INTEGER,
         height INTEGER,
         size INTEGER NOT NULL,
-        data TEXT NOT NULL,
+        created_at TEXT NOT NULL,
         thumb TEXT,
-        created_at TEXT NOT NULL
+        data TEXT NOT NULL
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_images_post ON images(post_id, position)`),
     ])
@@ -164,20 +165,18 @@ async function getPost(env, id) {
   return row ? (await withImages(env, [row]))[0] : null;
 }
 
-/* ---------- base64 helpers (images are stored as base64 text in D1) ---------- */
+/* ---------- base64 helpers (images are stored as base64 text in D1) ----------
+ * Node's native Buffer is ~30x faster than doing this in plain JS, which keeps each
+ * request well inside the free plan's 10 ms CPU limit. */
 
-function bytesToBase64(bytes) {
-  let bin = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-  return btoa(bin);
-}
+const bytesToBase64 = (bytes) => Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("base64");
+const base64ToBytes = (b64) => Buffer.from(b64, "base64");
 
-function base64ToBytes(b64) {
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
+/** Signed, expiring link so Telegram can download a photo without logging in. */
+const imageSig = (env, id, exp) => hmac(`${env.TELEGRAM_BOT_TOKEN}|${env.APP_PASSWORD}`, `img:${id}:${exp}`);
+async function signedImageUrl(env, origin, id) {
+  const exp = Date.now() + 3 * 3600e3;
+  return `${origin}/telegram/image/${id}?exp=${exp}&sig=${await imageSig(env, id, exp)}`;
 }
 
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -294,9 +293,19 @@ async function tgUpload(env, method, fields, files) {
 }
 
 /** Send a post's images to Telegram: one photo, or an album of up to 10. */
-async function sendPostImages(env, chatId, post) {
+async function sendPostImages(env, chatId, post, settings) {
   if (!post.images?.length) return;
   const ids = post.images.slice(0, 10).map((i) => i.id);
+  const origin = settings?.app_url;
+  if (origin && origin.startsWith("https://")) {
+    // Preferred: give Telegram signed links. Telegram downloads each photo in its own request,
+    // so this run doesn't have to load all the photos at once (keeps us within free CPU limits).
+    const urls = await Promise.all(ids.map((id) => signedImageUrl(env, origin, id)));
+    if (urls.length === 1) await tg(env, "sendPhoto", { chat_id: chatId, photo: urls[0] });
+    else await tg(env, "sendMediaGroup", { chat_id: chatId, media: urls.map((u) => ({ type: "photo", media: u })) });
+    return;
+  }
+  // Fallback (local testing without a public https address): upload the files directly.
   const { results } = await env.DB.prepare(
     "SELECT id, mime, data FROM images WHERE id IN (SELECT value FROM json_each(?)) ORDER BY position, id"
   )
@@ -366,7 +375,7 @@ async function sendReminder(env, chatId, post, settings, now) {
   await sendMessage(env, chatId, text, { reply_markup: postKeyboard(post, settings) });
   if (isNow) {
     try {
-      await sendPostImages(env, chatId, post);
+      await sendPostImages(env, chatId, post, settings);
     } catch (err) {
       console.error("sending images failed", post.id, err);
       await sendMessage(env, chatId, `⚠️ Couldn't send the images (${escapeHtml(err.message)}). Open the website to download them.`).catch(() => {});
@@ -502,6 +511,17 @@ async function handleWebhook(request, env) {
   return new Response("ok");
 }
 
+async function serveSignedImage(env, url, id) {
+  const exp = Number(url.searchParams.get("exp"));
+  const sig = url.searchParams.get("sig") || "";
+  if (!env.TELEGRAM_BOT_TOKEN || !env.APP_PASSWORD || !exp || exp < Date.now()) return new Response("expired", { status: 403 });
+  if (!safeEqual(sig, await imageSig(env, id, exp))) return new Response("forbidden", { status: 403 });
+  await ensureSchema(env);
+  const row = await env.DB.prepare("SELECT mime, data FROM images WHERE id = ?").bind(id).first();
+  if (!row) return new Response("not found", { status: 404 });
+  return new Response(base64ToBytes(row.data), { headers: { "content-type": row.mime, "cache-control": "private, max-age=3600" } });
+}
+
 /* ------------------------------------------------------------------ */
 /* Cron: reminders + daily digest                                      */
 /* ------------------------------------------------------------------ */
@@ -537,7 +557,7 @@ export async function runScheduled(env, now = Date.now()) {
 
     for (const post of posts) {
       const offsets = Array.isArray(post.reminder_offsets) ? post.reminder_offsets : settings.reminder_offsets;
-      const { due, nudge } = computeDueReminders(post, offsets, sent, now, {
+      const { due, nudge, markAlso } = computeDueReminders(post, offsets, sent, now, {
         nudgeAfterMin: settings.nudge_unposted ? NUDGE_AFTER_MIN : null,
         nudgeOffset: NUDGE_OFFSET,
       });
@@ -545,7 +565,7 @@ export async function runScheduled(env, now = Date.now()) {
         if (due.length) {
           await sendReminder(env, chatId, post, settings, now);
           report.reminders++;
-          await markSent(env, post, due, now);
+          await markSent(env, post, [...due, ...markAlso], now);
         } else if (nudge) {
           const text = [
             "🤔 <b>Did you post this?</b>",
@@ -747,12 +767,20 @@ async function handleApi(request, env, url) {
       thumbB64 = bytesToBase64(new Uint8Array(await thumb.arrayBuffer()));
     }
     const int = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.round(Number(v)) : null);
-    const row = await env.DB.prepare(
-      `INSERT INTO images (post_id, position, mime, width, height, size, data, thumb, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${IMAGE_META_COLS}`
-    )
-      .bind(postId, count, file.type, int(form.get("width")), int(form.get("height")), bytes.length, bytesToBase64(bytes), thumbB64, new Date().toISOString())
-      .first();
+    let row;
+    try {
+      row = await env.DB.prepare(
+        `INSERT INTO images (post_id, position, mime, width, height, size, data, thumb, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${IMAGE_META_COLS}`
+      )
+        .bind(postId, count, file.type, int(form.get("width")), int(form.get("height")), bytes.length, bytesToBase64(bytes), thumbB64, new Date().toISOString())
+        .first();
+    } catch (err) {
+      if (/maximum DB size|SQLITE_FULL|database or disk is full/i.test(String(err.message))) {
+        return error("Storage is full (free database limit is 500 MB). Free up space in Settings → Storage.", 507);
+      }
+      throw err;
+    }
     return json({ image: imageMeta(row) }, 201);
   }
 
@@ -785,6 +813,41 @@ async function handleApi(request, env, url) {
   if (imgMatch && method === "DELETE") {
     await env.DB.prepare("DELETE FROM images WHERE id = ?").bind(Number(imgMatch[1])).run();
     return json({ ok: true });
+  }
+
+  /* ---------- storage ---------- */
+  if (path === "/api/storage" && method === "GET") {
+    // Estimate: photos are stored as base64 (≈ 4/3 of their size) + small thumbnails.
+    const r = await env.DB.prepare(
+      "SELECT COUNT(*) AS n, COALESCE(SUM(size), 0) AS bytes FROM images"
+    ).first();
+    const days = Math.max(1, Math.min(365, Number(url.searchParams.get("days")) || 30));
+    const cutoff = new Date(Date.now() - days * 864e5).toISOString();
+    const old = await env.DB.prepare(
+      `SELECT COUNT(*) AS n, COALESCE(SUM(i.size), 0) AS bytes FROM images i JOIN posts p ON p.id = i.post_id
+       WHERE p.status = 'posted' AND COALESCE(p.scheduled_at, p.posted_at) < ?`
+    )
+      .bind(cutoff)
+      .first();
+    const est = (n, bytes) => Math.round(bytes * 1.37 + n * 50_000);
+    return json({
+      images: r.n,
+      used: est(r.n, r.bytes),
+      limit: 500 * 1024 * 1024,
+      oldPosted: { days, images: old.n, bytes: est(old.n, old.bytes) },
+    });
+  }
+
+  if (path === "/api/storage/cleanup" && method === "POST") {
+    const body = (await readJson(request)) || {};
+    const days = Math.max(1, Math.min(365, Number(body.days) || 30));
+    const cutoff = new Date(Date.now() - days * 864e5).toISOString();
+    const res = await env.DB.prepare(
+      `DELETE FROM images WHERE post_id IN (SELECT id FROM posts WHERE status = 'posted' AND COALESCE(scheduled_at, posted_at) < ?)`
+    )
+      .bind(cutoff)
+      .run();
+    return json({ ok: true, deleted: res.meta?.changes ?? 0 });
   }
 
   /* ---------- settings ---------- */
@@ -909,6 +972,8 @@ export default {
     try {
       if (url.pathname.startsWith("/api/")) return await handleApi(request, env, url);
       if (url.pathname === "/telegram/webhook" && request.method === "POST") return await handleWebhook(request, env);
+      const tgImg = url.pathname.match(/^\/telegram\/image\/(\d+)$/);
+      if (tgImg && request.method === "GET") return await serveSignedImage(env, url, Number(tgImg[1]));
       if (url.pathname.startsWith("/telegram/")) return new Response("Not found", { status: 404 });
       return env.ASSETS.fetch(request);
     } catch (err) {

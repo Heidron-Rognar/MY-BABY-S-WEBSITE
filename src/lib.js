@@ -112,7 +112,7 @@ export function normalizePostInput(body = {}) {
  */
 export function computeDueReminders(post, offsets, sent, now, { nudgeAfterMin = null, nudgeOffset = -120 } = {}) {
   const sched = Date.parse(post.scheduled_at);
-  const result = { due: [], nudge: false };
+  const result = { due: [], nudge: false, markAlso: [] };
   if (!Number.isFinite(sched) || post.status === "posted") return result;
   const key = (o) => `${post.id}|${o}|${post.scheduled_at}`;
 
@@ -131,6 +131,12 @@ export function computeDueReminders(post, offsets, sent, now, { nudgeAfterMin = 
       if (o > closestSent) continue;
       if (sched - o * 60e3 <= now && !sent.has(key(o))) result.due.push(o);
     }
+  }
+  // A message sent within 5 minutes of the post time already says "Time to post!", so the
+  // remaining close reminders (e.g. "at posting time") count as sent too — no duplicate later.
+  result.markAlso = [];
+  if (result.due.length && sched - now <= 5 * 60e3) {
+    result.markAlso = offsets.filter((o) => !result.due.includes(o) && !sent.has(key(o)) && sched - o * 60e3 <= now + 5 * 60e3);
   }
   if (
     !result.due.length &&

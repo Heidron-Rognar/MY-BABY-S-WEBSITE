@@ -1354,6 +1354,12 @@ async function renderSettings(view) {
     </section>
 
     <section class="panel">
+      <h2>📦 Photo storage</h2>
+      <p class="muted">The free database holds about 500 MB — roughly 400–800 photos. Captions take almost no space.</p>
+      <div id="storage-body" class="muted">Checking…</div>
+    </section>
+
+    <section class="panel">
       <h2>💾 Your data</h2>
       <p class="muted">Download a backup of every caption (images aren't included — download them from each post).</p>
       <div class="row">
@@ -1368,6 +1374,46 @@ async function renderSettings(view) {
   renderTagEditors();
   bindSettings();
   renderTelegram();
+  renderStorage();
+}
+
+const fmtMB = (b) => `${(b / 1024 / 1024).toFixed(b < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+
+async function renderStorage() {
+  const box = $("#storage-body");
+  if (!box) return;
+  let st;
+  try {
+    st = await api("/api/storage?days=30");
+  } catch (err) {
+    box.textContent = err.message;
+    return;
+  }
+  if (!$("#storage-body")) return;
+  const pct = Math.min(100, (st.used / st.limit) * 100);
+  const color = pct > 90 ? "var(--danger)" : pct > 75 ? "var(--warn)" : "var(--ok)";
+  box.innerHTML = `
+    <div class="meter"><span style="width:${pct.toFixed(1)}%;background:${color}"></span></div>
+    <p class="small" style="margin:8px 0 0;color:var(--text)"><b>${fmtMB(st.used)}</b> of ${fmtMB(st.limit)} used · ${st.images} photo${st.images === 1 ? "" : "s"}${
+      pct > 75 ? ` · <b style="color:${color}">getting full</b>` : ""
+    }</p>
+    <div class="row">
+      <button class="btn btn-ghost" id="storage-clean" ${st.oldPosted.images ? "" : "disabled"}>
+        Remove photos from posts posted 30+ days ago${st.oldPosted.images ? ` (${st.oldPosted.images}, ~${fmtMB(st.oldPosted.bytes)})` : ""}
+      </button>
+    </div>
+    <p class="small" style="margin:8px 0 0">Captions stay — only the photos are removed. Tip: download any you want to keep first.</p>`;
+  $("#storage-clean")?.addEventListener("click", async () => {
+    if (!confirm(`Remove ${st.oldPosted.images} photo(s) from posts that were posted more than 30 days ago? Captions are kept.`)) return;
+    try {
+      const r = await api("/api/storage/cleanup", { method: "POST", body: { days: 30 } });
+      toast(`Removed ${r.deleted} photo(s)`);
+      await loadPosts();
+      renderStorage();
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  });
 }
 
 async function saveSettings(patch, msg = "Settings saved") {

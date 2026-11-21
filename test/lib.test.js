@@ -41,7 +41,16 @@ test("post created last-minute gets all due offsets in one batch", () => {
 
 test("posted posts never remind", () => {
   const r = computeDueReminders(post(0, { status: "posted" }), [0], new Set(), NOW, { nudgeAfterMin: 120 });
-  assert.deepEqual(r, { due: [], nudge: false });
+  assert.deepEqual(r, { due: [], nudge: false, markAlso: [] });
+});
+
+test("a 'Time to post!' sent a minute early also covers the at-posting-time reminder", () => {
+  const p = post(1 / 60); // 1 minute away
+  const r = computeDueReminders(p, [1440, 60, 0], new Set(), NOW);
+  assert.deepEqual(r.due, [1440, 60]);
+  assert.deepEqual(r.markAlso, [0]);
+  // far away: nothing extra is marked
+  assert.deepEqual(computeDueReminders(post(0.5), [1440, 60, 0], new Set(), NOW).markAlso, []);
 });
 
 test("nudge 2h after if not posted, only once", () => {

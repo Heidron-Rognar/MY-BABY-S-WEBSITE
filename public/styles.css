@@ -411,3 +411,6 @@ svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
 .adder input { width: 96px; }
 .custom-row { margin-top: 14px; display: grid; gap: 8px; }
 .custom-row .label { font-weight: 700; font-size: 13px; color: var(--muted); }
+
+.meter { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--line); }
+.meter span { display: block; height: 100%; border-radius: 999px; min-width: 4px; transition: width 0.3s ease; }
