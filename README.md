@@ -44,12 +44,12 @@ You don't need a credit card. On the free plan there's **no way to get billed**:
 2. Go to **Workers & Pages → Create → Import a repository**.
 3. Connect GitHub and pick this repository (`MY-BABY-S-WEBSITE`). Keep the default settings: the deploy command is `npx wrangler deploy`.
 4. Click **Deploy**. Cloudflare builds the site and **creates the database automatically**.
-   Your site gets an address like `https://caption-studio.<your-name>.workers.dev`.
+   Your site gets an address like `https://my-baby-s-website.<your-name>.workers.dev`.
 
 > Prefer the terminal? Run `npm install`, then `npx wrangler login`, then `npx wrangler deploy`.
 
 ### 3. Add your two secrets
-In the Cloudflare dashboard, go to your **caption-studio** Worker → **Settings → Variables and Secrets → Add**. Choose type **Secret** for both:
+In the Cloudflare dashboard, go to your **my-baby-s-website** Worker → **Settings → Variables and Secrets → Add**. Choose type **Secret** for both:
 
 | Name | Value |
 | --- | --- |

@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "caption-studio",
+  // Must match the Worker's name in the Cloudflare dashboard.
+  "name": "my-baby-s-website",
   "main": "src/worker.js",
   "compatibility_date": "2025-11-01",
   // Gives the worker Node's fast native Buffer (used to store photos efficiently within free CPU limits).
@@ -18,6 +19,7 @@
   "d1_databases": [
     {
       "binding": "DB",
+      // Keep this name as-is: it points at the database that holds your real posts.
       "database_name": "caption-studio-db"
     }
   ],
