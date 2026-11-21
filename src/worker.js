@@ -86,6 +86,10 @@ function ensureSchema(env) {
         if (!cols.has("reminder_offsets")) {
           await env.DB.prepare("ALTER TABLE posts ADD COLUMN reminder_offsets TEXT").run();
         }
+        // Archive: hides posted captions from the Posted list without deleting anything.
+        if (!cols.has("archived_at")) {
+          await env.DB.prepare("ALTER TABLE posts ADD COLUMN archived_at TEXT").run();
+        }
         // One-time switch to the new default content types (later edits in Settings are kept).
         const ver = await env.DB.prepare("SELECT value FROM settings WHERE key = 'content_types_version'").first();
         if (!ver || Number(JSON.parse(ver.value)) < CONTENT_TYPES_VERSION) {
@@ -708,6 +712,35 @@ async function handleApi(request, env, url) {
     return json({ post: rowToPost(row) }, 201);
   }
 
+  // Archive / unarchive posted captions: { archived: true|false, ids: [1,2,3] } or { archived, all: true }.
+  // Only posts marked "posted" can be archived.
+  if (path === "/api/posts/archive" && method === "POST") {
+    const body = (await readJson(request)) || {};
+    const archived = body.archived !== false;
+    const stamp = archived ? new Date().toISOString() : null;
+    const base = archived
+      ? "UPDATE posts SET archived_at = ? WHERE status = 'posted' AND archived_at IS NULL"
+      : "UPDATE posts SET archived_at = ? WHERE status = 'posted' AND archived_at IS NOT NULL";
+    let updated = 0;
+    if (body.all === true) {
+      const r = await env.DB.prepare(base).bind(stamp).run();
+      updated = r.meta?.changes ?? 0;
+    } else {
+      const ids = [...new Set((Array.isArray(body.ids) ? body.ids : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+      if (!ids.length) return error("Pick at least one post");
+      if (ids.length > 1000) return error("Too many posts at once");
+      // D1 allows max 100 bound values per statement, so go in chunks.
+      const stmts = [];
+      for (let i = 0; i < ids.length; i += 90) {
+        const chunk = ids.slice(i, i + 90);
+        stmts.push(env.DB.prepare(`${base} AND id IN (${chunk.map(() => "?").join(",")})`).bind(stamp, ...chunk));
+      }
+      const results = await env.DB.batch(stmts);
+      updated = results.reduce((n, r) => n + (r.meta?.changes ?? 0), 0);
+    }
+    return json({ ok: true, updated });
+  }
+
   const postMatch = path.match(/^\/api\/posts\/(\d+)$/);
   if (postMatch) {
     const id = Number(postMatch[1]);
@@ -726,7 +759,9 @@ async function handleApi(request, env, url) {
       const postedAt = p.status === "posted" ? existing.posted_at || now : null;
       const row = await env.DB.prepare(
         `UPDATE posts SET title = ?, caption = ?, content_type = ?, platforms = ?, scheduled_at = ?, status = ?,
-           notes = ?, posted_at = ?, reminder_offsets = ?, updated_at = ? WHERE id = ? RETURNING *`
+           notes = ?, posted_at = ?, reminder_offsets = ?, updated_at = ?,
+           archived_at = CASE WHEN ? = 'posted' THEN archived_at ELSE NULL END
+         WHERE id = ? RETURNING *`
       )
         .bind(
           p.title,
@@ -739,6 +774,7 @@ async function handleApi(request, env, url) {
           postedAt,
           p.reminder_offsets ? JSON.stringify(p.reminder_offsets) : null,
           now,
+          p.status,
           id
         )
         .first();
