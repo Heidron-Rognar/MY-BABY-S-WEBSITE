@@ -88,8 +88,8 @@ test("local midnight is independent of UTC and daylight-saving days can be 23 or
 });
 
 test("every theme has a greeting and salutations follow the local time", () => {
-  const labels = new Set(["rose", "rose-dark", "matcha", "bookish", "cyber", "christmas"].map((t) => greetingForTheme(t).label));
-  assert.equal(labels.size, 6);
+  const labels = new Set(["rose", "rose-dark", "matcha", "bookish", "cyber", "christmas", "beach"].map((t) => greetingForTheme(t).label));
+  assert.equal(labels.size, 7);
   assert.equal(greetingForTheme("auto"), greetingForTheme("unknown"));
   assert.equal(salutation(day(0, 9)), "Good morning");
   assert.equal(salutation(day(0, 12)), "Good afternoon");
@@ -122,7 +122,7 @@ test("card preserves the verse when switching themes and refreshes at midnight, 
   const first = verseText();
   assert.equal(elements.get("daily-inspiration").hidden, false);
   assert.equal(elements.get("daily-date").dateTime, "2026-11-21");
-  for (theme of ["matcha", "bookish", "cyber", "christmas", "rose-dark", "auto"]) {
+  for (theme of ["matcha", "bookish", "cyber", "christmas", "beach", "rose-dark", "auto"]) {
     await controller.refresh();
     assert.equal(verseText(), first);
     assert.equal(elements.get("daily-title").textContent, greetingForTheme(theme).title);
@@ -195,7 +195,7 @@ test("card text renders immediately, makes no fetch calls, and keeps the same ve
   const expected = getDailyVerse(day(), 42);
   assert.equal(elements.get("daily-verse-text").textContent, expected.text);
   assert.equal(elements.get("daily-verse-reference").textContent, expected.reference);
-  for (theme of ["auto", "rose", "rose-dark", "matcha", "bookish", "cyber", "christmas"]) {
+  for (theme of ["auto", "rose", "rose-dark", "matcha", "bookish", "cyber", "christmas", "beach"]) {
     controller.refresh();
     assert.equal(elements.get("daily-verse-text").textContent, expected.text);
   }

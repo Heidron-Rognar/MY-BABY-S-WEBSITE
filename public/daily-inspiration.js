@@ -7,6 +7,7 @@ const GREETINGS = {
   matcha: { label: "A SIP OF STILLNESS", title: "Pause, breathe, be still.", ornament: "❦" },
   bookish: { label: "THE DAILY READING", title: "A little light for this chapter.", ornament: "❧" },
   cyber: { label: "DAILY SIGNAL / 01", title: "Faith in the noise.", ornament: "+" },
+  beach: { label: "A MOMENT BY THE SEA", title: "Let your soul catch its breath.", ornament: "🐚" },
   christmas: { label: "THE HOLIDAY STUDIO", title: "A little merry, a little grace.", ornament: "✧" },
 };
 
