@@ -6,3 +6,6 @@ APP_PASSWORD=change-me
 # Local testing only: lets login work when the site is shown inside a preview frame.
 # Never set this on the real Cloudflare Worker.
 # EMBEDDED_PREVIEW=1
+
+# Optional: authorized Crossway key for daily ESV verses (server-side only)
+# ESV_API_KEY=

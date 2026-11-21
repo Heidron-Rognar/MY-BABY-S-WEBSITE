@@ -2,6 +2,7 @@
 
 One place for all your social media captions: no more Google Docs, random notes, or screenshots.
 
+- **A daily moment of encouragement** in every theme: a greeting card with an ESV Bible verse and reference. A shuffled pool of **100 references** stays fixed for the local calendar day and changes at midnight or when you return to the app. The random order is saved per device. ESV text is fetched through the authenticated Worker using your own Crossway API key; see **Daily ESV verses** below.
 - **Write captions** with a live character, word, and hashtag counter, plus warnings when a caption is too long for Instagram, TikTok, X, Threads, etc.
 - **Schedule them** with a date and time, a **content type** (Showcase, Relatable, Trend, Motivational, Feedbacks, Educational, Personal/Brand, Mini Quiz; editable in Settings), and **platforms**.
 - **Attach photos** (up to 10 per post). Paste, drag & drop or pick from your gallery. They're resized in your browser to max 2048 px so they fit the free database, and sent to you on Telegram at posting time. Videos aren't supported (too big for free storage), so paste a Drive link in the notes instead.
@@ -93,3 +94,15 @@ test/            node --test unit tests
 wrangler.jsonc   Cloudflare config (D1 database, cron every 5 min)
 ```
 Database tables are created automatically the first time the app runs, and upgraded automatically when new versions add features. Images are stored as base64 in the `images` table.
+
+## Daily ESV verses
+
+1. Request your own API key from [Crossway's ESV API](https://api.esv.org/). Review and comply with its current terms. The API is offered free for qualifying non-commercial use; commercial/promotional use may require separate licensing. Supplying a key does not itself grant rights outside those terms.
+2. In your Cloudflare Worker's **Settings → Variables and Secrets**, add a **Secret** named `ESV_API_KEY`. Alternatively run `npx wrangler secret put ESV_API_KEY` and enter it at the terminal prompt. **Never put the key in chat, public JavaScript, Git, or a plain-text variable.**
+3. For local development only, add `ESV_API_KEY=...` to the ignored `.dev.vars` file. Reload the app or use the card's **Try again** button after configuring it.
+
+The authenticated `/api/verse?reference=...` endpoint only accepts the 100 single-verse references in `public/daily-verses.js`; it is not a general Bible proxy. The text comes directly from Crossway and is not bundled into this repository, silently replaced by another translation, or saved in browser storage. Responses retain Crossway's `(ESV)` marker, and each card includes an ESV.org link and the required copyright/usage notice. Crossway text is not covered by any license that applies to this application's source code.
+
+Cloudflare's server-side Cache API reuses passages across sessions for up to seven days and then refreshes them. The fixed allowlist bounds the cache to 100 distinct verses, below Crossway's 500-verse ceiling and under half of every represented book. Browser responses are `no-store`. Without the key, or during a provider outage, the greeting still works and a clear setup/error message plus **Try again** appears instead of a mislabeled verse. Daily rotation uses the device's local date, not the reminder time zone; it also refreshes when the app resumes after missed days.
+
+An authorized key and access to Crossway are required to test real ESV delivery. Automated tests use invented provider-response fixtures, not copied ESV passages.

@@ -1,0 +1,126 @@
+/* One daily greeting/reading, with a distinct treatment for every theme.
+   Colors follow the existing variables, including Rosé Auto in dark mode. */
+.daily-inspiration {
+  --daily-ink: var(--text);
+  --daily-muted: color-mix(in srgb, var(--text) 72%, var(--surface));
+  position: relative; isolation: isolate; min-width: 0; overflow: hidden;
+  display: grid; justify-items: center; gap: 10px; text-align: center;
+  padding: 23px 30px 20px; margin: 12px 0 20px;
+  color: var(--daily-ink); border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  background:
+    radial-gradient(ellipse at 0 0, color-mix(in srgb, var(--accent) 12%, transparent), transparent 48%),
+    radial-gradient(ellipse at 100% 100%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 48%),
+    var(--surface);
+}
+.daily-meta {
+  width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px;
+  color: var(--daily-muted); font-size: 11px; font-weight: 600;
+}
+.daily-meta time { white-space: nowrap; }
+.daily-label { margin-top: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+.daily-inspiration h2 {
+  margin: 0; max-width: 28ch; color: var(--daily-ink); font-family: var(--font);
+  font-size: clamp(22px, 3.5vw, 29px); line-height: 1.25; font-weight: 700;
+  letter-spacing: -0.025em; text-wrap: balance;
+}
+.daily-ornament { display: flex; align-items: center; gap: 12px; color: var(--accent); font-size: 19px; line-height: 1; }
+.daily-ornament::before, .daily-ornament::after { content: ""; width: 40px; height: 1px; background: currentColor; opacity: 0.3; }
+.daily-reading { margin: 0; width: 100%; max-width: 62ch; }
+.daily-reading blockquote { margin: 0; }
+.daily-reading p { margin: 0; font-size: 16px; line-height: 1.75; overflow-wrap: anywhere; text-wrap: pretty; }
+.daily-reading p::before { content: "“"; }
+.daily-reading p::after { content: "”"; }
+.daily-reading figcaption { margin-top: 10px; color: var(--daily-muted); font-size: 12px; font-weight: 700; }
+.daily-reading cite { font-style: normal; }
+.daily-version { font-weight: 400; }
+.daily-footnote { color: var(--daily-muted); font-size: 10px; letter-spacing: 0.03em; }
+
+/* Rosé Night: soft moonlight. Auto inherits the same adaptive theme colors. */
+[data-theme="rose-dark"] .daily-inspiration { border-top: 2px solid #c28bae; }
+[data-theme="rose-dark"] .daily-ornament { color: #e6b3cb; }
+
+/* Matcha: a quiet cream-paper journal with green binding and tea-shop serifs. */
+[data-theme="matcha"] .daily-inspiration {
+  border-radius: 6px; border-left: 4px solid var(--accent); background: #fbf8ef;
+  box-shadow: 0 3px 0 -1px #fbf8ef, 0 3px 0 var(--line), 0 8px 20px #4e6b3a0d;
+}
+[data-theme="matcha"] .daily-inspiration h2 { font-family: var(--serif-display); font-style: italic; font-weight: 500; }
+[data-theme="matcha"] .daily-label { color: var(--leaf-dark); }
+[data-theme="matcha"] .daily-reading p { font-size: 16px; line-height: 1.85; }
+[data-theme="matcha"] .daily-reading figcaption { font-variant: small-caps; letter-spacing: 0.04em; }
+
+/* Bookish: a library bookplate, with a burgundy ribbon and gold double rule. */
+[data-theme="bookish"] .daily-inspiration {
+  border: 3px double #bca57d; border-radius: 2px; background: var(--surface);
+  outline: 1px solid var(--line); outline-offset: -9px;
+}
+[data-theme="bookish"] .daily-inspiration::after {
+  content: ""; position: absolute; top: -1px; right: 24px; width: 13px; height: 28px;
+  background: var(--accent); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%); pointer-events: none;
+}
+[data-theme="bookish"] .daily-meta { padding-right: 22px; }
+[data-theme="bookish"] .daily-inspiration h2 { font: italic 600 clamp(25px, 4vw, 34px)/1.2 var(--book-display); }
+[data-theme="bookish"] .daily-reading p { font-size: 15px; }
+[data-theme="bookish"] .daily-ornament { color: #96733a; }
+[data-theme="bookish"] .daily-label { font-weight: 500; letter-spacing: 0.2em; }
+
+/* Cyber: a daily signal panel. Only the frame is technical, never the verse. */
+[data-theme="cyber"] .daily-inspiration {
+  --daily-ink: #e2eeee; --daily-muted: #afbec2;
+  border: 1px solid #3c5055; border-top: 3px solid var(--accent); border-radius: 0;
+  background:
+    linear-gradient(#65e3e408 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, #65e3e408 1px, transparent 1px) 0 0 / 28px 28px, #11191c;
+  box-shadow: 4px 4px 0 #090c0e;
+}
+[data-theme="cyber"] .daily-inspiration h2 { font-family: var(--wide); font-weight: 700; letter-spacing: 0.03em; }
+[data-theme="cyber"] :is(.daily-meta, .daily-label, .daily-reading, .daily-footnote) { font-family: var(--mono); }
+[data-theme="cyber"] .daily-meta { color: #65e3e4; text-transform: uppercase; font-size: 10px; }
+[data-theme="cyber"] .daily-reading { padding: 12px 16px; border-left: 2px solid #65e3e4; background: #0b1013; }
+[data-theme="cyber"] .daily-reading p { font-size: 14px; line-height: 1.8; text-transform: none; letter-spacing: 0; }
+[data-theme="cyber"] .daily-reading figcaption { color: #65e3e4; font-size: 11px; font-weight: 500; }
+[data-theme="cyber"] .daily-footnote { font-size: 9px; }
+
+/* Christmas keeps its evergreen greeting card, now with a daily reading. */
+[data-theme="christmas"] .daily-inspiration {
+  --daily-ink: #fffdf6; --daily-muted: #d7e4d3;
+  padding: 25px 110px 22px; border: 1px solid var(--forest); border-radius: 12px;
+  background: url("/christmas-garland.svg") center / cover no-repeat, var(--forest);
+  outline: 1px solid #d9b86e66; outline-offset: -7px;
+}
+[data-theme="christmas"] .daily-inspiration h2 { font: italic 500 clamp(26px, 4vw, 35px)/1.2 var(--holiday-display); }
+[data-theme="christmas"] :is(.daily-label, .daily-ornament) { color: #e7cb8c; }
+[data-theme="christmas"] .daily-reading { max-width: 54ch; }
+[data-theme="christmas"] .daily-reading p { font-size: 16px; }
+[data-theme="christmas"] .daily-reading figcaption { color: #e7cb8c; }
+
+@media (max-width: 640px) {
+  .daily-inspiration { padding: 18px 18px 16px; gap: 9px; }
+  .daily-meta { font-size: 10px; }
+  .daily-reading p { font-size: 15px; line-height: 1.7; }
+  .daily-label { font-size: 9px; letter-spacing: 0.14em; }
+  .daily-footnote { font-size: 9px; }
+  [data-theme="bookish"] .daily-inspiration::after { right: 16px; }
+  [data-theme="cyber"] .daily-reading { padding: 10px 12px; }
+  [data-theme="cyber"] .daily-reading p { font-size: 13px; }
+  [data-theme="christmas"] .daily-inspiration {
+    padding: 18px 20px;
+    background-image: url("/christmas-garland.svg"), url("/christmas-garland.svg");
+    background-position: left 14px, right 14px; background-size: 450px auto; background-repeat: no-repeat;
+  }
+  [data-theme="christmas"] .daily-meta { padding: 4px 6px; border-radius: 4px; background: #1e4b3de6; }
+  [data-theme="christmas"] .daily-inspiration h2 { padding-inline: 18px; }
+  [data-theme="christmas"] .daily-reading p { font-size: 15px; }
+}
+
+/* Live ESV loading/error states never masquerade as scripture quotations. */
+.daily-status { margin: 0; max-width: 58ch; font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.daily-inspiration .daily-retry { color: var(--daily-ink); border: 1px solid currentColor; padding: 6px 12px; border-radius: 4px; min-height: 36px; }
+.daily-reading p { white-space: pre-line; }
+.daily-source { color: var(--daily-muted); font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.daily-source:hover { color: var(--daily-ink); }
+.daily-copyright { color: var(--daily-muted); max-width: 70ch; font-size: 10px; line-height: 1.7; text-align: left; }
+.daily-copyright summary { cursor: pointer; text-align: center; }
+.daily-copyright p { margin: 10px 0 0; }
+.daily-inspiration :is(a, button, summary):focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }

@@ -1,4 +1,7 @@
 // Caption Studio — front-end (no build step, plain JS)
+import { initDailyInspiration } from "./daily-inspiration.js";
+
+let dailyInspiration;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -61,6 +64,7 @@ function applyThemeChrome() {
     l.href = THEME_FONTS[t];
     document.head.append(l);
   }
+  dailyInspiration?.refresh();
 }
 
 function setTheme(id) {
@@ -291,6 +295,8 @@ function matchesSearch(p) {
 /* ------------------------------------------------------------------ */
 
 function showLogin() {
+  dailyInspiration?.destroy();
+  dailyInspiration = undefined;
   $("#app").hidden = true;
   $("#login").hidden = false;
   $("#editor").open && $("#editor").close();
@@ -309,6 +315,8 @@ async function boot() {
   }
   $("#login").hidden = true;
   $("#app").hidden = false;
+  if (!dailyInspiration) dailyInspiration = initDailyInspiration(currentTheme);
+  else dailyInspiration.refresh();
   applyBranding();
   await loadPosts();
   route();
