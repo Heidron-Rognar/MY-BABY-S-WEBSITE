@@ -1,5 +1,5 @@
-// A 100-reference rotation, not a bundled copy of licensed Bible text.
-// ESV passages are fetched only by the authenticated server endpoint.
+// A bundled, public-domain World English Bible reading for each local day.
+import { WEB_VERSES } from "./web-verses.js";
 export const VERSE_REFERENCES = Object.freeze([
   "Psalm 23:1",
   "Psalm 46:1",
@@ -152,4 +152,10 @@ export function getDailyReference(date, seed) {
   }
   const day = localDayNumber(date);
   return VERSE_REFERENCES[order[((day % order.length) + order.length) % order.length]];
+}
+
+
+export function getDailyVerse(date, seed) {
+  const reference = getDailyReference(date, seed);
+  return { reference, text: WEB_VERSES[reference], translation: "WEB" };
 }

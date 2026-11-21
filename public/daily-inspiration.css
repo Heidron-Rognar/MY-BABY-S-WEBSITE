@@ -114,13 +114,7 @@
   [data-theme="christmas"] .daily-reading p { font-size: 15px; }
 }
 
-/* Live ESV loading/error states never masquerade as scripture quotations. */
-.daily-status { margin: 0; max-width: 58ch; font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
-.daily-inspiration .daily-retry { color: var(--daily-ink); border: 1px solid currentColor; padding: 6px 12px; border-radius: 4px; min-height: 36px; }
 .daily-reading p { white-space: pre-line; }
 .daily-source { color: var(--daily-muted); font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
 .daily-source:hover { color: var(--daily-ink); }
-.daily-copyright { color: var(--daily-muted); max-width: 70ch; font-size: 10px; line-height: 1.7; text-align: left; }
-.daily-copyright summary { cursor: pointer; text-align: center; }
-.daily-copyright p { margin: 10px 0 0; }
 .daily-inspiration :is(a, button, summary):focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
