@@ -1,0 +1,4 @@
+# Local development secrets (copy to .dev.vars — never commit .dev.vars)
+APP_PASSWORD=change-me
+# Optional: lets you test the Telegram parts locally
+# TELEGRAM_BOT_TOKEN=123456:ABC...
