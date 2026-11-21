@@ -8,7 +8,6 @@
  */
 
 import { Buffer } from "node:buffer";
-import { getEsvVerse } from "./esv.js";
 import {
   DEFAULT_SETTINGS,
   normalizeSettings,
@@ -668,11 +667,6 @@ async function handleApi(request, env, url) {
 
   if (!(await isAuthed(request, env))) return error("Not logged in", 401);
 
-  // Shared server-side scripture cache; no database migration is needed.
-  if (path === "/api/verse" && method === "GET") {
-    const result = await getEsvVerse(url.searchParams.get("reference"), env);
-    return json(result.body, result.status);
-  }
   await ensureSchema(env);
 
   // Remember the public URL so Telegram buttons can link back to the site.

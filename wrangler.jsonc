@@ -34,5 +34,4 @@
   // Secrets (set them with `npx wrangler secret put NAME` or in the Cloudflare dashboard):
   //   APP_PASSWORD        – the password you type to open the website
   //   TELEGRAM_BOT_TOKEN  – the token @BotFather gives you
-  //   ESV_API_KEY         – authorized Crossway key for the daily ESV verse cards
 }
