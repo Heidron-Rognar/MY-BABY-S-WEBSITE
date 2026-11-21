@@ -14,13 +14,13 @@ const THEMES = [
   { id: "auto", name: "Rosé · Auto", desc: "Light by day, dark at night. Follows your phone.", preview: "tp-auto" },
   { id: "rose", name: "Rosé Light", desc: "The original soft pink look.", preview: "tp-rose" },
   { id: "rose-dark", name: "Rosé Night", desc: "Same look, always dark.", preview: "tp-rose-dark" },
-  { id: "cyber", name: "Cyber", desc: "Signal yellow, cyan circuitry & a terminal-inspired Draft Deck.", preview: "tp-cyber" },
-  { id: "matcha", name: "Matcha", desc: "Cream paper, serif type & matcha green. Cozy and bookish.", preview: "tp-matcha" },
+  { id: "cyber", name: "Cyber", desc: "Chakra Petch + IBM Plex Mono. Angular sci-fi type & a neon Draft Deck.", preview: "tp-cyber" },
+  { id: "matcha", name: "Matcha", desc: "Fraunces + Literata. Soft bookish headings & a cozy paper journal.", preview: "tp-matcha" },
 ];
 const THEME_BG = { rose: "#fff7f3", "rose-dark": "#1b1517", cyber: "#121316", matcha: "#f3eee1" };
 // Extra fonts are only downloaded when their theme is picked (keep in sync with the snippet in index.html).
 const THEME_FONTS = {
-  cyber: "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap",
+  cyber: "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap",
   matcha:
     "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..600&display=swap",
 };
