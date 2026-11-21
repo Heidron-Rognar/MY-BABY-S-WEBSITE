@@ -1624,6 +1624,12 @@ async function renderTelegram() {
   }
   if (!$("#tg-body")) return; // navigated away
 
+  if (st.previewMode) {
+    body.innerHTML = `<span class="pill-status off">Off on this test copy</span>
+      <p class="small" style="margin:10px 0 0">This is a test preview of the website. Telegram is switched off here so it can't disturb your real bot or send real reminders. Everything else works normally, with its own separate test data.</p>`;
+    return;
+  }
+
   if (!st.tokenSet) {
     body.innerHTML = `<span class="pill-status off">Not set up yet</span>
       <ol class="steps">

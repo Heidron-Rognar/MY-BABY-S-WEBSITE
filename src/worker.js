@@ -294,6 +294,7 @@ async function tg(env, method, payload) {
 
 /** Telegram call with file uploads (multipart). `files` = { name: { bytes, mime, filename } }. */
 async function tgUpload(env, method, fields, files) {
+  if (!env.TELEGRAM_BOT_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN secret is not set");
   const base = env.TELEGRAM_API_BASE || "https://api.telegram.org";
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.append(k, typeof v === "string" ? v : JSON.stringify(v));
@@ -901,6 +902,7 @@ async function handleApi(request, env, url) {
       link = `https://t.me/${settings.bot_username}?start=${await linkCode(env)}`;
     }
     return json({
+      previewMode: env.PREVIEW_MODE === "1",
       tokenSet,
       connected: Boolean(settings.telegram_chat_id),
       chatId: settings.telegram_chat_id || null,
@@ -979,8 +981,16 @@ function publicSettings(s) {
 /* Entry point                                                         */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Cloudflare branch Previews set PREVIEW_MODE=1 (see wrangler.jsonc "previews").
+ * A test copy must never talk to the real Telegram bot (it could steal the bot's
+ * webhook or message the real chat), so we hide the bot token there no matter what.
+ */
+const forPreview = (env) => (env.PREVIEW_MODE === "1" ? { ...env, TELEGRAM_BOT_TOKEN: undefined } : env);
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, rawEnv) {
+    const env = forPreview(rawEnv);
     const url = new URL(request.url);
     try {
       if (url.pathname.startsWith("/api/")) return await handleApi(request, env, url);
@@ -995,7 +1005,8 @@ export default {
     }
   },
 
-  async scheduled(_event, env, ctx) {
+  async scheduled(_event, rawEnv, ctx) {
+    const env = forPreview(rawEnv);
     ctx.waitUntil(
       runScheduled(env).then((r) => {
         if (r.reminders || r.nudges || r.digest || r.errors.length) console.log("cron", JSON.stringify(r));
