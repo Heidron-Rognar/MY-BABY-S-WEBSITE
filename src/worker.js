@@ -243,10 +243,12 @@ async function isAuthed(request, env) {
   return safeEqual(sig, await hmac(env.APP_PASSWORD, `session:${exp}`));
 }
 
-function sessionCookie(value, maxAge, secure) {
-  return `${SESSION_COOKIE}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${
-    secure ? "; Secure" : ""
-  }`;
+// EMBEDDED_PREVIEW=1 (local testing only, set in .dev.vars) lets the login cookie
+// work when the site is shown inside another page's frame (e.g. a preview window).
+// Production keeps the stricter SameSite=Lax.
+function sessionCookie(value, maxAge, secure, embedded) {
+  const site = embedded ? "SameSite=None; Secure; Partitioned" : `SameSite=Lax${secure ? "; Secure" : ""}`;
+  return `${SESSION_COOKIE}=${encodeURIComponent(value)}; Path=/; HttpOnly; ${site}; Max-Age=${maxAge}`;
 }
 
 const webhookSecret = (env) => hmac(env.TELEGRAM_BOT_TOKEN, "webhook-secret");
@@ -636,7 +638,8 @@ async function markSent(env, post, offsets, now) {
 async function handleApi(request, env, url) {
   const path = url.pathname.replace(/\/+$/, "");
   const method = request.method;
-  const secure = url.protocol === "https:";
+  const secure = url.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https";
+  const embedded = env.EMBEDDED_PREVIEW === "1";
 
   if (!env.APP_PASSWORD) {
     return error("The APP_PASSWORD secret is not set yet. See README → Setup.", 503);
@@ -650,11 +653,11 @@ async function handleApi(request, env, url) {
       await new Promise((r) => setTimeout(r, 600)); // slow down guessing
       return error("Wrong password", 401);
     }
-    return json({ ok: true }, 200, { "set-cookie": sessionCookie(await makeSession(env), SESSION_DAYS * 86400, secure) });
+    return json({ ok: true }, 200, { "set-cookie": sessionCookie(await makeSession(env), SESSION_DAYS * 86400, secure, embedded) });
   }
 
   if (path === "/api/logout" && method === "POST") {
-    return json({ ok: true }, 200, { "set-cookie": sessionCookie("", 0, secure) });
+    return json({ ok: true }, 200, { "set-cookie": sessionCookie("", 0, secure, embedded) });
   }
 
   if (!(await isAuthed(request, env))) return error("Not logged in", 401);
