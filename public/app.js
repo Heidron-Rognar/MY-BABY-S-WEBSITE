@@ -1,4 +1,5 @@
 // Caption Studio — front-end (no build step, plain JS)
+import { createCalendarStamps } from "./calendar-stamps.js";
 import { RECOVERY_KEY, cleanDraft, draftKey, readDrafts, writeDrafts, moveToLocalDay } from "./planning-tools.js";
 import { applyBrandIcon, initBrandIconControls } from "./branding.js";
 import { initBackupTools } from "./backup-ui.js";
@@ -390,7 +391,7 @@ function route() {
     return;
   }
   const nextView = ["upcoming", "calendar", "ideas", "posted", "settings"].includes(hash) ? hash : "upcoming";
-  if (nextView !== "calendar") { movePostId = null; clearCalendarDrag(); }
+  if (nextView !== "calendar") { movePostId = null; clearCalendarDrag(); calendarStamps.leave(); }
   if (nextView !== state.view) state.selected.clear();
   state.view = nextView;
   render();
@@ -712,6 +713,16 @@ async function handlePostedAction(act) {
 
 /* ---------- calendar ---------- */
 
+const calendarStamps = createCalendarStamps({
+  api, getPosts: () => state.posts, getPreferences: () => state.settings?.completion_stamps,
+  refreshPreferences: async () => { state.settings.completion_stamps = (await api("/api/settings")).settings.completion_stamps; },
+  savePreferences: async (completion_stamps) => {
+    const result = await api("/api/settings", { method: "PUT", body: { completion_stamps } });
+    state.settings = result.settings;
+  },
+  onRender: () => { if (state.view === "calendar") render(); },
+});
+
 function renderCalendar(view) {
   const month = state.calMonth;
   const first = startOfMonth(month);
@@ -730,26 +741,28 @@ function renderCalendar(view) {
   const dows = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => `<div class="cal-dow">${d}</div>`).join("");
   let cells = "";
   const weeks = Math.ceil((first.getDay() + new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()) / 7);
+  calendarStamps.prepare(Array.from({ length: weeks * 7 }, (_, i) => dayKey(addDays(gridStart, i))));
   for (let i = 0; i < weeks * 7; i++) {
     const d = addDays(gridStart, i);
     const k = dayKey(d);
     const posts = byDay.get(k) || [];
-    const cls = ["cal-cell", d.getMonth() !== month.getMonth() && "other", sameDay(d, today) && "today", state.calSelected === k && "selected"]
+    const cls = ["cal-cell", calendarStamps.isComplete(k) && "has-completion", d.getMonth() !== month.getMonth() && "other", sameDay(d, today) && "today", state.calSelected === k && "selected"]
       .filter(Boolean)
       .join(" ");
     const items = posts
       .slice(0, 3)
       .map(
         (p) =>
-          `<span class="cal-item ${p.status === "posted" ? "posted" : ""}" style="--type-color:${typeColor(p.content_type)}" data-id="${p.id}" draggable="${p.status !== "posted"}" title="${p.status === "posted" ? "Posted caption" : "Drag to another day to reschedule"}">${esc(
+          `<span class="cal-item ${p.status === "posted" ? "posted" : ""}" style="--type-color:${typeColor(p.content_type)}" data-id="${p.id}" draggable="${p.status !== "posted" && !calendarStamps.isArranging()}" title="${p.status === "posted" ? "Posted caption" : "Drag to another day to reschedule"}">${esc(
             fmtTime(new Date(p.scheduled_at)).replace(/\s?([AP])M/i, (_, a) => a.toLowerCase())
           )} ${esc(p.title || p.content_type || p.caption.slice(0, 30))}</span>`
       )
       .join("");
     const more = posts.length > 3 ? `<span class="cal-more">+${posts.length - 3} more</span>` : "";
     const dots = posts.length ? `<span class="cal-dots">${posts.slice(0, 4).map((p) => `<i style="--type-color:${typeColor(p.content_type)}"></i>`).join("")}</span>` : "";
-    cells += `<button type="button" class="${cls}" data-day="${k}" aria-label="${esc(fmtDate(d))}${posts.length ? `, ${posts.length} posts` : ""}">
-      <span class="cal-num">${d.getDate()}</span>${items}${more}${dots}</button>`;
+    const dayLabel = `${fmtDate(d)}${posts.length ? `, ${posts.length} posts` : ""}${calendarStamps.isComplete(k) ? ", all scheduled captions posted" : ""}`;
+    cells += `<div class="${cls}" data-day="${k}"><button type="button" class="cal-day-button" aria-label="${esc(dayLabel)}" ${calendarStamps.isArranging() ? "disabled" : ""}>
+      <span class="cal-num">${d.getDate()}</span>${items}${more}${dots}</button>${calendarStamps.dayHTML(k)}</div>`;
   }
 
   let panel = "";
@@ -772,7 +785,8 @@ function renderCalendar(view) {
       <button class="icon-btn" data-cal="-1" aria-label="Previous month"><svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4-4.6-4.6z"/></svg></button>
       <button class="icon-btn" data-cal="1" aria-label="Next month"><svg viewBox="0 0 24 24"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg></button>
     </div>
-    <section class="planning-panel calendar-move" aria-label="Move a scheduled caption" aria-busy="${calendarMoveBusy}">
+    ${calendarStamps.controlsHTML()}
+    <section class="planning-panel calendar-move" aria-label="Move a scheduled caption" aria-busy="${calendarMoveBusy}" ${calendarStamps.isArranging() ? "hidden" : ""}>
       <p class="small" id="calendar-move-help" role="status">${calendarMoveBusy ? "Moving caption…" : movePostId ? "Choose a destination day below. Press Enter or tap a day to move your caption." : "Drag an unposted caption to a day, or choose one here and then tap a destination. Posting times use this device’s time zone."}</p>
       <label for="calendar-move-choice" class="sr-only">Caption to move</label>
       <select id="calendar-move-choice" ${calendarMoveBusy ? "disabled" : ""} aria-describedby="calendar-move-help">
@@ -784,6 +798,7 @@ function renderCalendar(view) {
     </section>
     <div class="cal" aria-describedby="calendar-move-help">${dows}${cells}</div>
     ${panel}`;
+  calendarStamps.mount();
 }
 
 /* Desktop drag/drop plus a tap/keyboard path using the same calendar day buttons. */
@@ -824,13 +839,13 @@ calendarView.addEventListener("click", (event) => {
     const value = $("#calendar-move-choice")?.value;
     if (!value) return toast("Choose a caption to move first", "error");
     movePostId = Number(value); render();
-    ($(".cal-cell.selected") || $(".cal-cell.today") || $(".cal-cell"))?.focus();
+    ($(".cal-cell.selected .cal-day-button") || $(".cal-cell.today .cal-day-button") || $(".cal-day-button"))?.focus();
   }
   if (event.target.closest("#calendar-cancel-move")) { movePostId = null; render(); }
 });
 calendarView.addEventListener("dragstart", (event) => {
   const item = event.target.closest('.cal-item[draggable="true"]');
-  if (!item || calendarMoveBusy) return;
+  if (!item || calendarMoveBusy || calendarStamps.isArranging()) return;
   dragPostId = Number(item.dataset.id);
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("text/plain", String(dragPostId));
@@ -838,7 +853,7 @@ calendarView.addEventListener("dragstart", (event) => {
 });
 calendarView.addEventListener("dragover", (event) => {
   const day = event.target.closest(".cal-cell");
-  if (!day || !dragPostId || calendarMoveBusy) return;
+  if (!day || !dragPostId || calendarMoveBusy || calendarStamps.isArranging()) return;
   event.preventDefault(); event.dataTransfer.dropEffect = "move";
   $$(".drop-target", calendarView).forEach((el) => el.classList.remove("drop-target"));
   day.classList.add("drop-target");
@@ -854,7 +869,7 @@ function clearCalendarDrag() {
 calendarView.addEventListener("dragend", clearCalendarDrag);
 calendarView.addEventListener("drop", (event) => {
   const day = event.target.closest(".cal-cell");
-  if (!day || !dragPostId) return;
+  if (!day || !dragPostId || calendarStamps.isArranging()) return;
   event.preventDefault();
   const id = dragPostId; clearCalendarDrag();
   void rescheduleFromCalendar(id, day.dataset.day);
@@ -863,6 +878,7 @@ calendarView.addEventListener("drop", (event) => {
 /* ---------- global click handling for views ---------- */
 
 $("#view").addEventListener("click", async (e) => {
+  if (calendarStamps.isArranging() && e.target.closest(".cal-cell")) return;
   const act = e.target.closest("[data-act]");
   if (act) {
     e.stopPropagation();

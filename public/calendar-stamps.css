@@ -1,0 +1,68 @@
+/* Completion is a quiet decoration, not a reminder or an overlay on captions. */
+.cal-day-button {
+  display: flex; flex-direction: column; align-items: stretch; gap: 3px; flex: 1;
+  width: 100%; min-width: 0; padding: 0; border: 0; background: none;
+  text-align: left; color: inherit; cursor: pointer; font: inherit;
+}
+.cal-day-button:disabled { color: inherit; opacity: 1; cursor: default; }
+.cal-day-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.stamp-bay { position: relative; flex: 0 0 94px; min-height: 94px; width: 100%; min-width: 0; }
+.completion-stamp {
+  position: absolute; display: block; width: min(62px, calc(100% - 14px)); aspect-ratio: 180 / 210;
+  margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent;
+  transform-origin: center; filter: drop-shadow(1px 2px 1px #35251a30); pointer-events: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.completion-stamp.wax { aspect-ratio: 1; }
+.completion-stamp img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.cal[data-stamp-arrange="true"] .completion-stamp { pointer-events: auto; cursor: grab; touch-action: none; }
+.cal[data-stamp-arrange="true"] .completion-stamp:active { cursor: grabbing; }
+.completion-stamp:focus-visible, .completion-stamp.stamp-selected { outline: 2px dashed var(--accent); outline-offset: 3px; }
+.cal[data-stamp-arrange="true"] .stamp-bay { background: color-mix(in srgb, var(--accent) 4%, transparent); border-radius: 4px; }
+.stamp-tools { margin: 12px 0; display: grid; gap: 12px; }
+.stamp-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.stamp-toolbar > div { flex: 1 1 230px; }
+.stamp-tools p { margin: 0; }
+.stamp-tools .btn { white-space: normal; }
+.stamp-tools .check { width: fit-content; }
+.stamp-inspector { display: grid; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.stamp-inspector select { min-width: 0; max-width: 100%; }
+.stamp-adjust { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.stamp-adjust input { min-width: 60px; flex: 1; accent-color: var(--accent); }
+.stamp-adjust output { min-width: 4ch; font-size: 13px; }
+.stamp-picker {
+  padding: 0; width: min(820px, calc(100vw - 28px)); max-width: calc(100vw - 28px);
+  max-height: calc(100dvh - 32px); border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--text); background: var(--surface); box-shadow: var(--shadow-lg); overflow-y: auto;
+}
+.stamp-picker::backdrop { background: #142c385e; backdrop-filter: blur(3px); }
+.stamp-picker header, .stamp-picker footer { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: var(--surface); }
+.stamp-picker header { border-bottom: 1px solid var(--line); }
+.stamp-picker header > div { flex: 1; }
+.stamp-picker h2 { margin: 0; font-size: 21px; }
+.stamp-picker p { margin: 4px 0 0; }
+.stamp-picker footer { position: sticky; bottom: 0; z-index: 1; flex-wrap: wrap; border-top: 1px solid var(--line); }
+.stamp-picker footer p { flex: 1 1 160px; }
+.stamp-picker-preview { display: flex; align-items: center; gap: 22px; padding: 16px 24px; background: var(--surface-2); }
+.stamp-picker-preview img { width: 78px; height: 92px; object-fit: contain; flex: none; filter: drop-shadow(1px 2px 2px #35251a30); transform: rotate(-5deg); }
+.stamp-picker-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 20px 8px; }
+.stamp-picker-filters input, .stamp-picker-filters select { width: 100%; min-width: 0; }
+#stamp-results { padding: 0 20px 12px; }
+.stamp-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; padding: 0 20px 20px; }
+.stamp-gallery button { min-width: 0; padding: 12px 8px; display: grid; justify-items: center; align-content: start; gap: 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); cursor: pointer; }
+.stamp-gallery button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); background: var(--surface-2); }
+.stamp-gallery button:hover { border-color: var(--accent); }
+.stamp-gallery img { width: 70px; height: 82px; object-fit: contain; filter: drop-shadow(1px 2px 1px #35251a25); }
+.stamp-gallery span { font-size: 12px; line-height: 1.4; font-weight: 700; overflow-wrap: anywhere; }
+.stamp-gallery small { font-size: 10px; color: var(--muted); }
+.stamp-picker :is(button, input, select):focus-visible, .stamp-tools :is(button, input, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 640px) {
+  .stamp-bay { flex-basis: 60px; min-height: 60px; }
+  .completion-stamp { width: min(48px, calc(100% - 14px)); }
+  .cal-day-button { align-items: center; }
+  .stamp-picker-filters { grid-template-columns: 1fr; }
+  .stamp-picker header, .stamp-picker footer { padding: 12px 14px; }
+  .stamp-picker .btn { white-space: normal; }
+  .stamp-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-inline: 14px; }
+  .stamp-picker h2 { font-size: 18px; }
+}
