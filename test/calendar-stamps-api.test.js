@@ -105,3 +105,31 @@ test("pearly storybook styles persist independently without overwriting another 
   assert.deepEqual(rows.find((r) => r.day === saved.day), saved);
   assert.equal(rows.find((r) => r.day === "2026-11-13").style, "pearl-enola-holmes-bicycle-blooms");
 });
+
+test("Bright Years postage persists per day without changing a different day's design", async () => {
+  const env = fixture(), cookie = await login(env);
+  const first = await call(env, cookie, '/api/calendar-stamps/2026-11-12', placement({ style: 'wax-pearl-rose' }));
+  assert.equal(first.status, 200); const saved = (await first.json()).stamp;
+  assert.equal((await call(env, cookie, '/api/calendar-stamps/2026-11-13', placement({ style: 'post-bright-years-porch-light' }))).status, 200);
+  const rows = (await (await call(env, cookie, '/api/calendar-stamps?start=2026-11-01&end=2026-11-30')).json()).stamps;
+  assert.deepEqual(rows.find((r) => r.day === saved.day), saved);
+  assert.equal(rows.find((r) => r.day === '2026-11-13').style, 'post-bright-years-porch-light');
+});
+
+test('all 20 embroidered patch styles can be saved without altering another day or the shared default', async () => {
+  const { PATCH_STYLES } = await import('../public/patch-catalog.js');
+  const env = fixture(), cookie = await login(env);
+  const untouched = await call(env, cookie, '/api/calendar-stamps/2026-11-12', placement({ style: 'post-paris' }));
+  assert.equal(untouched.status, 200); const original = (await untouched.json()).stamp;
+  let expected = null;
+  for (const patch of PATCH_STYLES) {
+    const response = await call(env, cookie, '/api/calendar-stamps/2026-11-13', placement({ style: patch.id, expected_updated_at: expected }));
+    assert.equal(response.status, 200);
+    const row = (await response.json()).stamp;
+    assert.equal(row.style, patch.id); expected = row.updated_at;
+  }
+  const rows = (await (await call(env, cookie, '/api/calendar-stamps?start=2026-11-01&end=2026-11-30')).json()).stamps;
+  assert.deepEqual(rows.find((r) => r.day === original.day), original);
+  const settings = (await (await call(env, cookie, '/api/settings')).json()).settings;
+  assert.equal(settings.completion_stamps.style, 'post-paris');
+});

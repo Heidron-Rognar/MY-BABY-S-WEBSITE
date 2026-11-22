@@ -48,7 +48,7 @@ Moves preserve the **device-local wall-clock posting time**, caption content, ph
 
 ## Movable calendar completion stamps
 
-The calendar now includes an optional **A little well done** stamp collection: **50 world-place postage designs** **50 engraved wax seals** (10 emblems in five wax finishes), **50 retro soda bottle caps**, and **50 pearly storybook wax seals**. All 200 designs are original, bundled vector artwork, with no external image service or font requirement. They are decorative studio stamps, not real postage.
+The calendar now includes an optional **A little well done** stamp collection: **50 world-place postage designs**, **50 literary postage designs**, **50 engraved wax seals** (10 emblems in five wax finishes), **50 retro soda bottle caps**, **50 pearly storybook wax seals**, and **20 embroidered patches**. All 270 designs are original, bundled vector artwork, with no external image service or font requirement. They are decorative studio stamps, not real postage.
 
 Wax seals use original botanical/ornamental engravings, an irregular poured-wax edge, inset impressions and subtle textured highlights. Existing wax IDs and saved choices are preserved; the 50 postage designs are unchanged.
 
@@ -56,13 +56,19 @@ The retro bottle-cap collection has five fictional soda flavors for each of ten 
 
 The **Pearly storybook wax** collection adds 50 pale, raised-relief seals: 25 Harry Potter-inspired and 25 Enola Holmes-inspired motifs. These use pearl/ivory with subtle blush, moonstone and champagne tints, smooth hand-poured edges and sculpted highlights rather than dark ink outlines. Filter the full pearly collection or either story individually. Each has its own motif (owls, winged keys, potion bottles, botanical clues, bicycles, ciphers and more), not just a recolor. No official crests, logos or product photographs are used. Existing postage, engraved wax and cap designs and saved IDs are unchanged.
 
+The **The Bright Years** literary-postage collection contains 50 original illustrations inspired by **Sarah Damoff’s** novel (not Alison Espach). Its broad themes and Texas setting inform five groups: home, family ties, Texas landscapes, memory/keepsakes, and grace/renewal. These are **spoiler-light thematic interpretations**, not claims that every illustrated object appears in the story. All have distinct motifs, warm paper, perforations and a device-local date cancellation. Search the book title or author, or filter **The Bright Years · 50 styles**. No cover art, quotations, plot revelations or official affiliation are used. The previous 200 designs and saved IDs remain unchanged.
+
+Book identification/theme reference: [Simon & Schuster — The Bright Years by Sarah Damoff](https://www.simonandschuster.com/books/The-Bright-Years/Sarah-Damoff/9781668061459). The collection does not reproduce text from the novel.
+
+The **Embroidered patches** collection adds **20 distinct compositions** across flowers, skies, beach shells, books, calligraphy, art and matcha, often combining themes. The original vector artwork uses colored cloth weave, directional satin-thread patterns, petal/leaf veins, tiny stitches, thread highlights and raised merrow-style borders. Designs have varied silhouettes (oval, round, arched, shield, scalloped and rounded-square) and individual color palettes rather than template recolors. Filter **Embroidered patches · 20 designs**, then search a theme such as *matcha*, *skies*, *beach*, *books* or *calligraphy*. Patch previews are larger for detail inspection; calendar decorations still fit their reserved space. Per-day choice, dragging, keyboard movement, rotation and saved position work exactly like the existing decorations. All previous 250 artworks are unchanged.
+
 ### When a stamp appears
 
 A day earns one stamp when it has **at least one scheduled caption and every caption scheduled on that device-local date is marked Posted**. The calculation uses all saved captions, independently of search/content filters, and includes archived posted history. Empty days, unscheduled ideas, and partly finished days do not qualify. Reverting a caption to Draft/Ready removes the visible stamp; completing the day again restores it in its remembered position. The app currently has **no separate goals tracker**, so this feature does not claim to verify other goals or off-app work. No content-gap nudges, reminders, or Telegram messages are added.
 
 ### Choosing and arranging
 
-- Tap any completed day’s stamp, or use **Choose a completed day → Choose stamp for this day · 200 styles**. Browse/search all 200 designs and press **Use for this day only**. This saves an individual choice without changing other days, the shared default, or that day’s position/tilt. No Arrange mode is needed; Cancel makes no change.
+- Tap any completed day’s stamp, or use **Choose a completed day → Choose stamp for this day · 270 styles**. Browse/search all 270 designs and press **Use for this day only**. This saves an individual choice without changing other days, the shared default, or that day’s position/tilt. No Arrange mode is needed; Cancel makes no change.
 - **Change shared default** is a separate, explicitly labeled action. It affects only days without their own stamp choice; individually chosen stamps remain unchanged.
 - Choose **Arrange stamps** to move stamps using a mouse or finger. Select a completed day in the inspector, or select its stamp. Focus a stamp and use arrow keys (Shift for larger steps), or use the directional buttons. Adjust **Tilt** between −18° and +18°.
 - The day picker sets an individual style; **Use default style for this day** removes that style override. **Reset position** restores corner placement and the default tilt while keeping the day’s selected style.

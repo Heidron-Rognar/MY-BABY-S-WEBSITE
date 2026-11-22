@@ -5,17 +5,17 @@ import { STAMP_STYLES, STAMP_IDS, DEFAULT_STAMP_PLACEMENT, completedCaptionDays,
 import { stampSvg, stampImageUrl } from "../public/stamp-art.js";
 import { normalizeSettings } from "../src/lib.js";
 
-test("200 distinct designs comprise 50 destinations, 100 wax seals and 50 bottle caps", () => {
-  assert.equal(STAMP_STYLES.length, 200); assert.equal(STAMP_IDS.size, 200);
-  assert.equal(STAMP_STYLES.filter((s) => s.kind === "postage").length, 50);
+test("270 distinct designs include 20 original embroidered patches", () => {
+  assert.equal(STAMP_STYLES.length, 270); assert.equal(STAMP_IDS.size, 270);
+  assert.equal(STAMP_STYLES.filter((s) => s.kind === "postage").length, 100);
   assert.equal(STAMP_STYLES.filter((s) => s.kind === "wax").length, 100);
-  assert.equal(new Set(STAMP_STYLES.map((s) => s.name)).size, 200);
+  assert.equal(new Set(STAMP_STYLES.map((s) => s.name)).size, 270);
   assert.equal(STAMP_STYLES.filter((s) => s.kind === "cap").length, 50);
   const images = STAMP_STYLES.map((s) => stampSvg(s.id));
-  assert.equal(new Set(images).size, 200);
-  for (const svg of images) {
+  assert.equal(new Set(images).size, 270);
+  for (const [index, svg] of images.entries()) {
     assert.match(svg, /^<svg xmlns=/); assert.doesNotMatch(svg, /undefined|<script|<foreignObject|onload=|https?:\/\/(?!www.w3.org\/2000\/svg)/);
-    assert.ok(svg.length < 12000);
+    assert.ok(svg.length < (STAMP_STYLES[index].kind === "patch" ? 16000 : 12000));
   }
 });
 
@@ -76,7 +76,7 @@ test("postage date is deterministic and invalid injected dates never become SVG 
 
 test("all 50 postage designs remain byte-for-byte unchanged", async () => {
   const { createHash } = await import("node:crypto");
-  const rendered = STAMP_STYLES.filter((s) => s.kind === "postage").map((s) => stampSvg(s.id, "2026-11-12")).join("\n");
+  const rendered = STAMP_STYLES.filter((s) => s.kind === "postage" && !s.collectionId).map((s) => stampSvg(s.id, "2026-11-12")).join("\n");
   assert.equal(createHash("sha256").update(rendered).digest("hex"), "f29bd2d2013a5c05a2a59abba5862eaa4189b771f37e4c929eaf0db088e5006e");
 });
 
@@ -127,8 +127,33 @@ test("50 new pearly wax seals have distinct motifs split evenly between Harry Po
 
 test("the previous 150 postage, engraved wax and cap renderings stay unchanged", async () => {
   const { createHash } = await import("node:crypto");
-  const previous = STAMP_STYLES.filter((s) => s.finish !== "pearl");
+  const previous = STAMP_STYLES.filter((s) => s.finish !== "pearl" && s.collectionId !== "bright-years" && s.kind !== "patch");
   assert.equal(previous.length, 150);
   const rendered = previous.map((s) => stampSvg(s.id, "2026-11-12")).join("\n");
   assert.equal(createHash("sha256").update(rendered).digest("hex"), "45e1e4dbd083a74b9e389855aae922bfd0407da6278e0f5f65754b51e282d6e5");
+});
+
+test("50 distinct spoiler-light Bright Years postage designs identify Sarah Damoff correctly", async () => {
+  const { BRIGHT_YEARS_ART } = await import('../public/bright-years-art.js');
+  const literary = STAMP_STYLES.filter((s) => s.collectionId === 'bright-years');
+  assert.equal(literary.length, 50); assert.equal(Object.keys(BRIGHT_YEARS_ART).length, 50);
+  assert.equal(new Set(literary.map((s) => s.art)).size, 50);
+  for (const style of literary) {
+    assert.equal(style.kind, 'postage'); assert.equal(style.author, 'Sarah Damoff');
+    assert.match(style.name, /The Bright Years · Sarah Damoff$/);
+    assert.ok(BRIGHT_YEARS_ART[style.art]);
+    assert.equal(validateStampPlacement({ ...DEFAULT_STAMP_PLACEMENT, style: style.id }).style, style.id);
+    assert.equal(validateStampPreferences({ enabled: true, style: style.id }).style, style.id);
+    const svg = stampSvg(style.id, '2026-11-12');
+    assert.match(svg, /THE BRIGHT YEARS/); assert.match(svg, /SARAH DAMOFF/);
+    assert.match(svg, /12\.11\.2026/); assert.doesNotMatch(svg, /undefined|NaN|Alison|Espach|<image/);
+  }
+});
+
+test("all previous 200 designs retain their exact artwork", async () => {
+  const { createHash } = await import('node:crypto');
+  const previous = STAMP_STYLES.filter((s) => s.collectionId !== 'bright-years' && s.kind !== 'patch');
+  assert.equal(previous.length, 200);
+  const rendered = previous.map((s) => stampSvg(s.id, '2026-11-12')).join('\n');
+  assert.equal(createHash('sha256').update(rendered).digest('hex'), '9a59590fec1b2e64b86eb72ed1adc8dea1df2b10b7853bb1e36acdad512f12f7');
 });

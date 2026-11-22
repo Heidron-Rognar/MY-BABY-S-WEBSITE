@@ -1,4 +1,5 @@
 /* Completion is a quiet decoration, not a reminder or an overlay on captions. */
+.cal-head h2 { min-width: 0; overflow-wrap: anywhere; }
 .cal-day-button {
   display: flex; flex-direction: column; align-items: stretch; gap: 3px; flex: 1;
   width: 100%; min-width: 0; padding: 0; border: 0; background: none;
@@ -13,7 +14,7 @@
   transform-origin: center; filter: drop-shadow(1px 2px 1px #35251a30); pointer-events: auto; cursor: pointer;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
-.completion-stamp.wax, .completion-stamp.cap { aspect-ratio: 1; }
+.completion-stamp.wax, .completion-stamp.cap, .completion-stamp.patch { aspect-ratio: 1; }
 .completion-stamp img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 .cal[data-stamp-arrange="true"] .completion-stamp { pointer-events: auto; cursor: grab; touch-action: none; }
 .cal[data-stamp-arrange="true"] .completion-stamp:active { cursor: grabbing; }
@@ -66,3 +67,8 @@
   .stamp-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-inline: 14px; }
   .stamp-picker h2 { font-size: 18px; }
 }
+
+/* Give embroidery a larger inspection preview; calendar geometry stays in its reserved bay. */
+.stamp-gallery button[data-style^="patch-"] img { width: 94px; height: 100px; max-width: 100%; }
+#stamp-big-preview[data-kind="patch"] { width: 116px; height: 120px; }
+@media (max-width: 420px) { #stamp-big-preview[data-kind="patch"] { width: 92px; height: 100px; } }

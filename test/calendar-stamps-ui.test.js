@@ -55,7 +55,7 @@ test("day stamp chooser is available without Arrange mode and saves only the sel
 
   // Open the actual stamp directly, and apply a day-specific wax design.
   click(`[data-stamp-day="${days[0]}"]`);
-  assert.equal(document.querySelectorAll('.stamp-gallery button').length, 200);
+  assert.equal(document.querySelectorAll('.stamp-gallery button').length, 270);
   assert.match(document.querySelector('#stamp-picker-title').parentElement.textContent, /Other days and your shared default will not change/);
   assert.equal(document.querySelector('#stamp-picker-apply').textContent, "Use for this day only");
   click('[data-style="wax-pearl-shell"]'); click('#stamp-picker-apply'); await settle();
@@ -99,11 +99,43 @@ test("day stamp chooser is available without Arrange mode and saves only the sel
   assert.equal(records.get(days[0]).style, 'wax-pearl-shell');
   assert.deepEqual(preferenceWrites, []);
 
+  // Literary postage can be filtered by the corrected book/author without changing other days.
+  click(`[data-stamp-day="${days[1]}"]`);
+  const bookCollection = document.querySelector('#stamp-kind'); bookCollection.value = 'bright-years';
+  bookCollection.dispatchEvent(new window.Event('change', { bubbles: true }));
+  assert.equal(document.querySelectorAll('.stamp-gallery button').length, 50);
+  const bookSearch = document.querySelector('#stamp-search'); bookSearch.value = 'Sarah Damoff';
+  bookSearch.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.equal(document.querySelectorAll('.stamp-gallery button').length, 50);
+  bookSearch.value = 'Porch Light'; bookSearch.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.equal(document.querySelectorAll('.stamp-gallery button').length, 1);
+  click('[data-style="post-bright-years-porch-light"]'); click('#stamp-picker-apply'); await settle();
+  assert.equal(records.get(days[1]).style, 'post-bright-years-porch-light');
+  assert.equal(records.get(days[0]).style, 'wax-pearl-shell');
+  assert.deepEqual(preferenceWrites, []);
+
+  // Embroidered patches have a dedicated collection and searchable themes.
+  click(`[data-stamp-day="${days[1]}"]`);
+  const patchCollection = document.querySelector('#stamp-kind'); patchCollection.value = 'patch';
+  patchCollection.dispatchEvent(new window.Event('change', { bubbles: true }));
+  assert.equal(document.querySelectorAll('.stamp-gallery button').length, 20);
+  const patchSearch = document.querySelector('#stamp-search');
+  for (const theme of ['flowers', 'skies', 'beach', 'books', 'calligraphy', 'art', 'matcha']) {
+    patchSearch.value = theme; patchSearch.dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.ok(document.querySelectorAll('.stamp-gallery button').length > 0, theme);
+  }
+  click('[data-style="patch-matcha-book-club"]');
+  assert.equal(document.querySelector('#stamp-big-preview').dataset.kind, 'patch');
+  click('#stamp-picker-apply'); await settle();
+  assert.equal(records.get(days[1]).style, 'patch-matcha-book-club');
+  assert.equal(records.get(days[0]).style, 'wax-pearl-shell');
+  assert.deepEqual(preferenceWrites, []);
+
   // Keyboard-accessible select/button path uses the selected date too.
   const daySelect = document.querySelector('#stamp-day-choice'); daySelect.value = days[0];
   daySelect.dispatchEvent(new window.Event('change', { bubbles: true }));
   click('[data-stamp-action="day-style"]'); click('[data-style="post-palawan"]'); click('#stamp-picker-cancel');
-  assert.equal(writes.length, 4); assert.equal(records.get(days[0]).style, 'wax-pearl-shell');
+  assert.equal(writes.length, 6); assert.equal(records.get(days[0]).style, 'wax-pearl-shell');
 
   // Failure never overwrites another day or the default and keeps the picker open.
   failSave = true;
@@ -111,7 +143,7 @@ test("day stamp chooser is available without Arrange mode and saves only the sel
   assert.match(document.querySelector('#stamp-picker-status').textContent, /Offline/);
   assert.equal(document.querySelector('.stamp-picker').open, true);
   assert.equal(records.get(days[0]).style, 'wax-pearl-shell');
-  assert.equal(records.get(days[1]).style, 'pearl-enola-holmes-bicycle-blooms');
+  assert.equal(records.get(days[1]).style, 'patch-matcha-book-club');
   click('#stamp-picker-cancel'); failSave = false;
 
   // Shared default is a separate, explicitly labeled action, never a side effect.
@@ -120,9 +152,9 @@ test("day stamp chooser is available without Arrange mode and saves only the sel
   click('[data-style="post-palawan"]'); click('#stamp-picker-apply'); await settle();
   assert.equal(prefs.style, 'post-palawan'); assert.equal(preferenceWrites.length, 1);
   assert.equal(records.get(days[0]).style, 'wax-pearl-shell');
-  assert.equal(records.get(days[1]).style, 'pearl-enola-holmes-bicycle-blooms');
+  assert.equal(records.get(days[1]).style, 'patch-matcha-book-club');
 
   controller.leave(); render(); await settle();
   assert.match(document.querySelector(`[data-stamp-day="${days[0]}"]`).getAttribute('aria-label'), /Pearl/);
-  assert.match(document.querySelector(`[data-stamp-day="${days[1]}"]`).getAttribute('aria-label'), /Bicycle & Blooms/);
+  assert.match(document.querySelector(`[data-stamp-day="${days[1]}"]`).getAttribute('aria-label'), /Matcha Book Club/);
 });
