@@ -79,3 +79,29 @@ test("stamp opt-out/default style preferences sync and invalid choices are rejec
   assert.equal(response.status, 200); assert.deepEqual((await response.json()).settings.completion_stamps, { enabled: false, style: "wax-pearl-shell" });
   assert.equal((await call(env, cookie, "/api/settings", { completion_stamps: { enabled: true, style: "bad" } })).status, 400);
 });
+
+test("retro caps persist per day without changing another day's wax or the default", async () => {
+  const env = fixture(), cookie = await login(env);
+  const waxResponse = await call(env, cookie, "/api/calendar-stamps/2026-11-12", placement({ style: "wax-pearl-rose" }));
+  assert.equal(waxResponse.status, 200); const wax = (await waxResponse.json()).stamp;
+  const capResponse = await call(env, cookie, "/api/calendar-stamps/2026-11-13", placement({ style: "cap-fallout-1" }));
+  assert.equal(capResponse.status, 200); const cap = (await capResponse.json()).stamp;
+  const changed = await call(env, cookie, "/api/calendar-stamps/2026-11-13", placement({ style: "cap-crimson-desert-5", expected_updated_at: cap.updated_at }));
+  assert.equal(changed.status, 200);
+  const rows = (await (await call(env, cookie, "/api/calendar-stamps?start=2026-11-01&end=2026-11-30")).json()).stamps;
+  assert.deepEqual(rows.find((r) => r.day === wax.day), wax);
+  assert.equal(rows.find((r) => r.day === cap.day).style, "cap-crimson-desert-5");
+  const settings = (await (await call(env, cookie, "/api/settings")).json()).settings;
+  assert.equal(settings.completion_stamps.style, "post-paris");
+});
+
+test("pearly storybook styles persist independently without overwriting another day", async () => {
+  const env = fixture(), cookie = await login(env);
+  const first = await call(env, cookie, "/api/calendar-stamps/2026-11-12", placement({ style: "pearl-harry-potter-owl-post" }));
+  assert.equal(first.status, 200); const saved = (await first.json()).stamp;
+  const second = await call(env, cookie, "/api/calendar-stamps/2026-11-13", placement({ style: "pearl-enola-holmes-bicycle-blooms" }));
+  assert.equal(second.status, 200);
+  const rows = (await (await call(env, cookie, "/api/calendar-stamps?start=2026-11-01&end=2026-11-30")).json()).stamps;
+  assert.deepEqual(rows.find((r) => r.day === saved.day), saved);
+  assert.equal(rows.find((r) => r.day === "2026-11-13").style, "pearl-enola-holmes-bicycle-blooms");
+});

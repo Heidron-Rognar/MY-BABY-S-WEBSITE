@@ -39,24 +39,26 @@ export function createCalendarStamps({ api, getPosts, getPreferences, savePrefer
     const editable = pref.enabled && loaded();
     return `<section class="planning-panel stamp-tools" aria-label="Completion stamps" aria-busy="${saving}">
       <div class="stamp-toolbar"><div><strong>A little well done</strong><p class="muted small">A stamp when every scheduled caption for a day is marked Posted. No empty-day awards, reminders or pressure.</p></div>
-      <button type="button" class="btn btn-ghost btn-sm" data-stamp-action="choose" ${saving ? "disabled" : ""}>Choose stamp · 100 styles</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-stamp-action="default-style" ${saving ? "disabled" : ""}>Change shared default</button>
       <button type="button" class="btn btn-ghost btn-sm" data-stamp-action="arrange" aria-pressed="${arranging}" ${saving || (!arranging && !editable) ? "disabled" : ""}>${arranging ? "Done arranging" : "Arrange stamps"}</button></div>
       <label class="check"><input type="checkbox" id="show-completion-stamps" ${pref.enabled ? "checked" : ""} ${saving ? "disabled" : ""}/> Show completion stamps</label>
       <p class="small muted">Default: ${esc(stampStyle(pref.style).name)}. Placement and per-day styles sync across devices. Captions stay above a reserved stamp area.</p>
-      ${arranging && editable ? `<div class="stamp-inspector"><label class="field"><span>Completed day to arrange</span><select id="stamp-day-choice" ${!selectedDay || saving ? "disabled" : ""}>${selectedDay ? days.filter((day) => completed.has(day)).map((day) => `<option value="${day}" ${selectedDay === day ? "selected" : ""}>${day} · ${completed.get(day).total} posted</option>`).join("") : '<option value="">No completed days in this calendar</option>'}</select></label>
-      <p class="small" id="stamp-arrange-help">Drag a stamp with your mouse or finger within its day. Or focus it and use arrow keys (Shift for larger steps). Caption rescheduling is paused while arranging.</p>
+      ${editable ? `<div class="stamp-inspector"><label class="field"><span>Choose a completed day</span><select id="stamp-day-choice" ${!selectedDay || saving ? "disabled" : ""}>${selectedDay ? days.filter((day) => completed.has(day)).map((day) => `<option value="${day}" ${selectedDay === day ? "selected" : ""}>${day} · ${completed.get(day).total} posted</option>`).join("") : '<option value="">No completed days in this calendar</option>'}</select></label>
+      <button type="button" class="btn btn-ghost btn-sm" data-stamp-action="day-style" ${!selectedDay || saving ? "disabled" : ""}>Choose stamp for this day · 200 styles</button>
+      <p class="small muted">Tap a stamp or select a date above. Your choice changes only that day, not other days or the shared default.</p>
       <p class="small" id="stamp-selected-style">${selectedDay ? esc(imageStyle(selectedDay).name) : ""}</p>
+      ${arranging ? `<p class="small" id="stamp-arrange-help">Drag a stamp with your mouse or finger within its day. Or focus it and use arrow keys (Shift for larger steps). Caption rescheduling is paused while arranging.</p>
       <div class="stamp-adjust"><label for="stamp-rotation">Tilt</label><input id="stamp-rotation" type="range" min="-18" max="18" value="${selectedDay ? placement(selectedDay).rotation : -8}" ${!selectedDay || saving ? "disabled" : ""}/><output id="stamp-rotation-value">${selectedDay ? placement(selectedDay).rotation : -8}°</output>
       ${[["left", "←"], ["up", "↑"], ["down", "↓"], ["right", "→"]].map(([id, arrow]) => `<button type="button" class="btn btn-ghost btn-sm" data-stamp-action="${id}" aria-label="Move stamp ${id}" ${!selectedDay || saving ? "disabled" : ""}>${arrow}</button>`).join("")}</div>
-      <div class="stamp-toolbar"><button type="button" class="btn btn-ghost btn-sm" data-stamp-action="day-style" ${!selectedDay || saving ? "disabled" : ""}>Change this day’s stamp</button><button type="button" class="btn btn-ghost btn-sm" data-stamp-action="follow-default" ${!selectedDay || saving ? "disabled" : ""}>Use default style for this day</button><button type="button" class="btn btn-ghost btn-sm" data-stamp-action="reset" ${!selectedDay || saving ? "disabled" : ""}>Reset position</button></div></div>` : ""}
-      <p id="stamp-status" class="small" role="status">${esc(message || (loaded() ? "Choose a default stamp, or arrange completed days individually." : "Loading saved stamp placements…"))}</p>
+      <div class="stamp-toolbar"><button type="button" class="btn btn-ghost btn-sm" data-stamp-action="follow-default" ${!selectedDay || saving ? "disabled" : ""}>Use default style for this day</button><button type="button" class="btn btn-ghost btn-sm" data-stamp-action="reset" ${!selectedDay || saving ? "disabled" : ""}>Reset position</button></div>` : ""}</div>` : ""}
+      <p id="stamp-status" class="small" role="status">${esc(message || (loaded() ? "Choose a stamp for a completed day, or tap its stamp. Other days stay unchanged." : "Loading saved stamp placements…"))}</p>
       ${ranges.get(range) === "failed" ? '<button type="button" class="btn btn-ghost btn-sm" data-stamp-action="retry">Retry loading stamps</button>' : ""}
     </section>`;
   }
   function dayHTML(day) {
     if (!preferences().enabled || !loaded() || !completed.has(day)) return "";
     const style = imageStyle(day);
-    return `<div class="stamp-bay"><button type="button" class="completion-stamp ${style.kind}" data-stamp-day="${day}" aria-label="${day}: all ${completed.get(day).total} captions posted. ${esc(style.name)} stamp. Use arrow keys to move while arranging." ${arranging ? 'tabindex="0"' : 'tabindex="-1" disabled aria-hidden="true"'}><img src="${stampImageUrl(style.id, day)}" alt="" draggable="false" /></button></div>`;
+    return `<div class="stamp-bay"><button type="button" class="completion-stamp ${style.kind}" data-stamp-day="${day}" aria-label="${day}: all ${completed.get(day).total} captions posted. ${esc(style.name)} stamp. ${arranging ? "Use arrow keys to move." : "Choose a stamp for this day only."}" ${saving ? "disabled" : ""}><img src="${stampImageUrl(style.id, day)}" alt="" draggable="false" /></button></div>`;
   }
   function paint(button, value = placement(button.dataset.stampDay)) {
     const bay = button.parentElement;
@@ -93,7 +95,7 @@ export function createCalendarStamps({ api, getPosts, getPreferences, savePrefer
       old ? records.set(day, old) : records.delete(day);
       announce(`Could not confirm the save: ${err.message} Reload placements before trying again.`);
       ranges.set(range, "failed"); return false;
-    } finally { saving = false; onRender(); if (arranging) restoreFocus(day); }
+    } finally { saving = false; onRender(); restoreFocus(day); }
   }
   async function saveDefault(value) {
     if (saving) return false;
@@ -160,7 +162,7 @@ export function createCalendarStamps({ api, getPosts, getPreferences, savePrefer
   });
   stage.addEventListener("click", (event) => {
     const stamp = event.target.closest("[data-stamp-day]");
-    if (stamp) { event.preventDefault(); event.stopImmediatePropagation(); if (arranging) { selectedDay = stamp.dataset.stampDay; syncInspector(); } return; }
+    if (stamp) { event.preventDefault(); event.stopImmediatePropagation(); if (!saving) { selectedDay = stamp.dataset.stampDay; syncInspector(); if (!arranging) showPicker(selectedDay); } return; }
     const control = event.target.closest("[data-stamp-action]");
     if (!control) return;
     event.preventDefault(); event.stopImmediatePropagation();
@@ -168,7 +170,7 @@ export function createCalendarStamps({ api, getPosts, getPreferences, savePrefer
     const action = control.dataset.stampAction;
     if (action === "arrange") { arranging = !arranging; message = arranging ? "Arrange mode is on. Captions cannot be opened or rescheduled until you choose Done arranging." : "Arrangement finished. Saved stamps stay where you placed them."; onRender(); stage.querySelector('[data-stamp-action="arrange"]')?.focus(); }
     if (action === "retry") { ranges.delete(range); void load(range); onRender(); }
-    if (action === "choose") showPicker(null);
+    if (action === "default-style") showPicker(null);
     if (action === "day-style" && selectedDay) showPicker(selectedDay);
     if (action === "follow-default" && selectedDay) void savePlacement(selectedDay, { ...placement(selectedDay), style: null });
     if (action === "reset" && selectedDay) void savePlacement(selectedDay, { ...DEFAULT_STAMP_PLACEMENT, style: placement(selectedDay).style });
@@ -182,11 +184,11 @@ export function createCalendarStamps({ api, getPosts, getPreferences, savePrefer
     picker?.remove();
     picker = document.createElement("dialog"); picker.className = "stamp-picker"; picker.setAttribute("aria-labelledby", "stamp-picker-title");
     let choice = targetDay ? imageStyle(targetDay).id : preferences().style;
-    picker.innerHTML = `<header><div><h2 id="stamp-picker-title">Choose a little celebration</h2><p class="muted small">50 world-place postage designs · 50 wax seals. ${targetDay ? `For ${targetDay} only.` : "Default for days without their own style."}</p></div><button type="button" class="icon-btn" id="stamp-picker-close" aria-label="Close stamp picker">✕</button></header>
-      <div class="stamp-picker-preview"><img id="stamp-big-preview" alt=""/><div><strong id="stamp-preview-name"></strong><p class="small muted">Original vector artwork. Decorative studio stamps, not real postage.</p></div></div>
-      <div class="stamp-picker-filters"><label class="field"><span>Find a stamp</span><input type="search" id="stamp-search" placeholder="Paris, Philippines, seashell…" /></label><label class="field"><span>Collection</span><select id="stamp-kind"><option value="all">All 100 styles</option><option value="postage">Postage · 50 places</option><option value="wax">Wax seals · 50 styles</option></select></label></div>
+    picker.innerHTML = `<header><div><h2 id="stamp-picker-title">Choose a little celebration</h2><p class="muted small">50 world-place postage designs · 50 engraved wax seals · 50 retro bottle caps · 50 pearly storybook seals. ${targetDay ? `For ${targetDay} only. Other days and your shared default will not change.` : "Shared default: changes every day without its own style. Individually chosen stamps stay unchanged."}</p></div><button type="button" class="icon-btn" id="stamp-picker-close" aria-label="Close stamp picker">✕</button></header>
+      <div class="stamp-picker-preview"><img id="stamp-big-preview" alt=""/><div><strong id="stamp-preview-name"></strong><p class="small muted">Original decorative artwork. Storybook seals and bottle caps are unofficial, original show/game-inspired designs, not affiliated merchandise.</p></div></div>
+      <div class="stamp-picker-filters"><label class="field"><span>Find a stamp</span><input type="search" id="stamp-search" placeholder="Harry Potter, Enola Holmes, pearl…" /></label><label class="field"><span>Collection</span><select id="stamp-kind"><option value="all">All 200 styles</option><option value="postage">Postage · 50 places</option><option value="wax">All wax seals · 100 styles</option><option value="pearl">Pearly storybook wax · 50 styles</option><option value="harry-potter">Pearl · Harry Potter · 25</option><option value="enola-holmes">Pearl · Enola Holmes · 25</option><option value="cap">Bottle caps · 50 styles</option></select></label></div>
       <p class="small muted" id="stamp-results" role="status"></p><div class="stamp-gallery" aria-label="Stamp styles"></div>
-      <footer><p id="stamp-picker-status" class="small" role="status">Select a style, then apply it.</p><button type="button" class="btn btn-ghost" id="stamp-picker-cancel">Cancel</button><button type="button" class="btn btn-primary" id="stamp-picker-apply">Use this stamp</button></footer>`;
+      <footer><p id="stamp-picker-status" class="small" role="status">Select a style, then apply it.</p><button type="button" class="btn btn-ghost" id="stamp-picker-cancel">Cancel</button><button type="button" class="btn btn-primary" id="stamp-picker-apply">${targetDay ? "Use for this day only" : "Update shared default"}</button></footer>`;
     document.body.append(picker);
     const find = (s) => picker.querySelector(s);
     function preview() {
@@ -196,9 +198,9 @@ export function createCalendarStamps({ api, getPosts, getPreferences, savePrefer
     }
     function gallery() {
       const query = find("#stamp-search").value.trim().toLocaleLowerCase(), kind = find("#stamp-kind").value;
-      const matches = STAMP_STYLES.filter((s) => (kind === "all" || s.kind === kind) && s.name.toLocaleLowerCase().includes(query));
-      find(".stamp-gallery").innerHTML = matches.map((s) => `<button type="button" data-style="${s.id}" aria-pressed="${s.id === choice}"><img src="${stampImageUrl(s.id)}" alt="" loading="lazy" draggable="false"/><span>${esc(s.name)}</span><small>${s.kind === "wax" ? "Wax seal" : "Vintage postage"}</small></button>`).join("");
-      find("#stamp-results").textContent = `${matches.length} of 100 styles`; preview();
+      const matches = STAMP_STYLES.filter((s) => (kind === "all" || s.kind === kind || (kind === "pearl" && s.finish === "pearl") || (s.finish === "pearl" && s.collectionId === kind)) && `${s.name} ${s.finish === "pearl" ? "pearl pearly white ivory embossed storybook wax" : ""} ${s.kind === "wax" && s.art === "laurel" ? "wildflowers botanical bouquet" : ""} ${s.kind === "cap" ? "retro soda softdrink bottle cap" : ""}`.toLocaleLowerCase().includes(query));
+      find(".stamp-gallery").innerHTML = matches.map((s) => `<button type="button" data-style="${s.id}" aria-pressed="${s.id === choice}"><img src="${stampImageUrl(s.id)}" alt="" loading="lazy" draggable="false"/><span>${esc(s.name)}</span><small>${s.finish === "pearl" ? "Pearly embossed wax" : s.kind === "wax" ? "Engraved wax seal" : s.kind === "cap" ? "Retro bottle cap" : "Vintage postage"}</small></button>`).join("");
+      find("#stamp-results").textContent = `${matches.length} of 200 styles`; preview();
     }
     find("#stamp-search").addEventListener("input", gallery); find("#stamp-kind").addEventListener("change", gallery);
     find(".stamp-gallery").addEventListener("click", (event) => { const option = event.target.closest("[data-style]"); if (option) { choice = option.dataset.style; preview(); } });
