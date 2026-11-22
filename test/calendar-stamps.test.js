@@ -5,13 +5,14 @@ import { STAMP_STYLES, STAMP_IDS, DEFAULT_STAMP_PLACEMENT, completedCaptionDays,
 import { stampSvg, stampImageUrl } from "../public/stamp-art.js";
 import { normalizeSettings } from "../src/lib.js";
 
-test("100 distinct named stamp designs comprise 50 destinations and 50 wax seals", () => {
-  assert.equal(STAMP_STYLES.length, 100); assert.equal(STAMP_IDS.size, 100);
+test("200 distinct designs comprise 50 destinations, 100 wax seals and 50 bottle caps", () => {
+  assert.equal(STAMP_STYLES.length, 200); assert.equal(STAMP_IDS.size, 200);
   assert.equal(STAMP_STYLES.filter((s) => s.kind === "postage").length, 50);
-  assert.equal(STAMP_STYLES.filter((s) => s.kind === "wax").length, 50);
-  assert.equal(new Set(STAMP_STYLES.map((s) => s.name)).size, 100);
+  assert.equal(STAMP_STYLES.filter((s) => s.kind === "wax").length, 100);
+  assert.equal(new Set(STAMP_STYLES.map((s) => s.name)).size, 200);
+  assert.equal(STAMP_STYLES.filter((s) => s.kind === "cap").length, 50);
   const images = STAMP_STYLES.map((s) => stampSvg(s.id));
-  assert.equal(new Set(images).size, 100);
+  assert.equal(new Set(images).size, 200);
   for (const svg of images) {
     assert.match(svg, /^<svg xmlns=/); assert.doesNotMatch(svg, /undefined|<script|<foreignObject|onload=|https?:\/\/(?!www.w3.org\/2000\/svg)/);
     assert.ok(svg.length < 12000);
@@ -71,4 +72,63 @@ test("postage date is deterministic and invalid injected dates never become SVG 
   assert.equal(stampImageUrl("post-paris", "2026-11-12"), stampImageUrl("post-paris", "2026-11-12"));
   assert.doesNotMatch(stampSvg("post-paris", '<script>alert(1)</script>'), /<script>/);
   assert.match(stampImageUrl("wax-pearl-shell"), /^data:image\/svg\+xml;charset=utf-8,/);
+});
+
+test("all 50 postage designs remain byte-for-byte unchanged", async () => {
+  const { createHash } = await import("node:crypto");
+  const rendered = STAMP_STYLES.filter((s) => s.kind === "postage").map((s) => stampSvg(s.id, "2026-11-12")).join("\n");
+  assert.equal(createHash("sha256").update(rendered).digest("hex"), "f29bd2d2013a5c05a2a59abba5862eaa4189b771f37e4c929eaf0db088e5006e");
+});
+
+test("ten named cap collections offer five distinct fictional flavors each, accepted by placement validation", () => {
+  const caps = STAMP_STYLES.filter((s) => s.kind === "cap");
+  const collections = [...new Set(caps.map((s) => s.collection))];
+  assert.equal(collections.length, 10);
+  for (const name of ["Stranger Things", "Fallout", "Cyberpunk", "The Witcher", "Crimson Desert"]) assert.ok(collections.includes(name));
+  for (const name of collections) {
+    const group = caps.filter((s) => s.collection === name);
+    assert.equal(group.length, 5); assert.equal(new Set(group.map((s) => s.title)).size, 5);
+    assert.equal(new Set(group.map((s) => stampSvg(s.id))).size, 5);
+  }
+  for (const cap of caps) {
+    assert.equal(validateStampPlacement({ ...DEFAULT_STAMP_PLACEMENT, style: cap.id }).style, cap.id);
+    assert.match(stampSvg(cap.id), /id="metal"/);
+    assert.match(stampSvg(cap.id), /<polygon points=/);
+    assert.doesNotMatch(stampSvg(cap.id), /NaN|undefined/);
+  }
+});
+
+test("wax preserves the 50 saved IDs and uses engraved botanical relief, inset rims and texture", () => {
+  const waxes = STAMP_STYLES.filter((s) => s.kind === "wax" && s.finish !== "pearl");
+  assert.equal(waxes.length, 50);
+  for (const wax of waxes) {
+    const svg = stampSvg(wax.id);
+    assert.match(svg, /id="engraving"/); assert.match(svg, /id="wax-grain"/);
+    assert.match(svg, /id="wax-well"/); assert.equal((svg.match(/<use href="#engraving"/g) || []).length, 2);
+    assert.equal(stampSvg(wax.id, "2026-11-12"), svg);
+  }
+});
+
+test("50 new pearly wax seals have distinct motifs split evenly between Harry Potter and Enola Holmes", () => {
+  const pearl = STAMP_STYLES.filter((s) => s.finish === "pearl");
+  assert.equal(pearl.length, 50); assert.equal(new Set(pearl.map((s) => s.art)).size, 50);
+  for (const collection of ["Harry Potter", "Enola Holmes"]) {
+    assert.equal(pearl.filter((s) => s.collection === collection).length, 25);
+  }
+  for (const s of pearl) {
+    assert.equal(s.kind, "wax");
+    assert.equal(validateStampPlacement({ ...DEFAULT_STAMP_PLACEMENT, style: s.id }).style, s.id);
+    assert.equal(validateStampPreferences({ enabled: true, style: s.id }).style, s.id);
+    const svg = stampSvg(s.id);
+    assert.match(svg, /id="raised"/); assert.match(svg, /id="pearl-body"/);
+    assert.doesNotMatch(svg, /undefined|NaN|<image|<text/);
+  }
+});
+
+test("the previous 150 postage, engraved wax and cap renderings stay unchanged", async () => {
+  const { createHash } = await import("node:crypto");
+  const previous = STAMP_STYLES.filter((s) => s.finish !== "pearl");
+  assert.equal(previous.length, 150);
+  const rendered = previous.map((s) => stampSvg(s.id, "2026-11-12")).join("\n");
+  assert.equal(createHash("sha256").update(rendered).digest("hex"), "45e1e4dbd083a74b9e389855aae922bfd0407da6278e0f5f65754b51e282d6e5");
 });

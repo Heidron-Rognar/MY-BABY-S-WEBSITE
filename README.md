@@ -48,7 +48,13 @@ Moves preserve the **device-local wall-clock posting time**, caption content, ph
 
 ## Movable calendar completion stamps
 
-The calendar now includes an optional **A little well done** stamp collection: **50 world-place postage designs** and **50 wax seals** (10 emblems in five wax finishes). All 100 designs are original, bundled vector artwork, with no external image service or font requirement. They are decorative studio stamps, not real postage.
+The calendar now includes an optional **A little well done** stamp collection: **50 world-place postage designs** **50 engraved wax seals** (10 emblems in five wax finishes), **50 retro soda bottle caps**, and **50 pearly storybook wax seals**. All 200 designs are original, bundled vector artwork, with no external image service or font requirement. They are decorative studio stamps, not real postage.
+
+Wax seals use original botanical/ornamental engravings, an irregular poured-wax edge, inset impressions and subtle textured highlights. Existing wax IDs and saved choices are preserved; the 50 postage designs are unchanged.
+
+The retro bottle-cap collection has five fictional soda flavors for each of ten show/game-inspired worlds: Stranger Things, Fallout, Cyberpunk, The Witcher, Crimson Desert, Arcane, The Last of Us, Wednesday, One Piece, and The Mandalorian. These are curated references, **not a measured popularity ranking**. Every cap uses original label names and pictograms, crimped metal edges and worn enamel; no official logos or product images are bundled. Filter **Bottle caps** or search a franchise/flavor in the picker. Caps use the same per-day selection, saved placement and completion rules as stamps.
+
+The **Pearly storybook wax** collection adds 50 pale, raised-relief seals: 25 Harry Potter-inspired and 25 Enola Holmes-inspired motifs. These use pearl/ivory with subtle blush, moonstone and champagne tints, smooth hand-poured edges and sculpted highlights rather than dark ink outlines. Filter the full pearly collection or either story individually. Each has its own motif (owls, winged keys, potion bottles, botanical clues, bicycles, ciphers and more), not just a recolor. No official crests, logos or product photographs are used. Existing postage, engraved wax and cap designs and saved IDs are unchanged.
 
 ### When a stamp appears
 
@@ -56,9 +62,10 @@ A day earns one stamp when it has **at least one scheduled caption and every cap
 
 ### Choosing and arranging
 
-- In **Calendar → Choose stamp · 100 styles**, browse all designs or filter postage/wax and search destinations/emblems. Select a design and press **Use this stamp**; Cancel makes no change. The default style applies to days without an individual override.
+- Tap any completed day’s stamp, or use **Choose a completed day → Choose stamp for this day · 200 styles**. Browse/search all 200 designs and press **Use for this day only**. This saves an individual choice without changing other days, the shared default, or that day’s position/tilt. No Arrange mode is needed; Cancel makes no change.
+- **Change shared default** is a separate, explicitly labeled action. It affects only days without their own stamp choice; individually chosen stamps remain unchanged.
 - Choose **Arrange stamps** to move stamps using a mouse or finger. Select a completed day in the inspector, or select its stamp. Focus a stamp and use arrow keys (Shift for larger steps), or use the directional buttons. Adjust **Tilt** between −18° and +18°.
-- **Change this day’s stamp** sets an individual style; **Use default style for this day** removes that style override. **Reset position** restores corner placement and the default tilt while keeping the day’s selected style.
+- The day picker sets an individual style; **Use default style for this day** removes that style override. **Reset position** restores corner placement and the default tilt while keeping the day’s selected style.
 - **Done arranging** restores ordinary calendar interactions. Caption opening/drag-rescheduling is paused inside day boxes while arranging, so stamp gestures cannot accidentally move a post. The normal caption move controls return afterward.
 - Stamps live in reserved space below date/task information, not over caption labels. Movement is constrained to this space inside the original day. Position is stored proportionally and bounded using the rotated stamp’s corners, so desktop and phone layouts stay legible. Narrow phone boxes necessarily have less horizontal movement.
 - **Show completion stamps** turns the feature off without deleting layouts. There are no notifications or overdue warnings.

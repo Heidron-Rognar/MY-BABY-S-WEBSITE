@@ -1,4 +1,6 @@
-// 50 destination postage designs + 50 wax/emblem combinations. No remote assets.
+// 50 postage + 50 engraved wax + 50 retro caps + 50 pearly storybook wax seals.
+import { PEARL_WAX_STYLES } from "./pearl-wax-catalog.js";
+import { BOTTLE_CAP_STYLES } from "./bottle-cap-catalog.js";
 const destinations = [
   ["paris", "Paris", "France", "#426d86"], ["london", "London", "England", "#944e50"],
   ["rome", "Rome", "Italy", "#a16a43"], ["kyoto", "Kyoto", "Japan", "#976582"],
@@ -31,6 +33,8 @@ const waxes = [["cranberry", "Cranberry", "#883c4d"], ["sea-glass", "Sea Glass",
 export const STAMP_STYLES = Object.freeze([
   ...destinations.map(([art, name, country, color]) => Object.freeze({ id: `post-${art}`, kind: "postage", name: `${name} · ${country}`, title: name, country, color, art })),
   ...waxes.flatMap(([wax, name, color]) => emblems.map(([art, label]) => Object.freeze({ id: `wax-${wax}-${art}`, kind: "wax", name: `${name} · ${label}`, title: label, color, art }))),
+  ...BOTTLE_CAP_STYLES,
+  ...PEARL_WAX_STYLES,
 ]);
 export const STAMP_IDS = new Set(STAMP_STYLES.map((s) => s.id));
 export const DEFAULT_STAMP_PREFERENCES = Object.freeze({ enabled: true, style: "post-paris" });

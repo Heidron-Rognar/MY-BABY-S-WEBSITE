@@ -1,3 +1,6 @@
+import { pearlWaxSvg } from "./pearl-wax-art.js";
+import { waxSvg } from "./wax-art.js";
+import { bottleCapSvg } from "./bottle-cap-art.js";
 import { stampStyle, validStampDay } from "./stamp-catalog.js";
 // Original, lightweight line engravings; trusted local SVG, never user-provided markup.
 const art = {
@@ -52,24 +55,14 @@ const art = {
   bohol: '<path d="M13 112q24-88 50 0m-7 0q26-111 54 0m-12 0q32-94 65 0M12 119h153"/><path d="M125 27h27m-21-7h22M25 38h27"/>',
   palawan: '<path d="M19 102 37 40l17 18 20-40 21 84M94 102l17-50 21 17 16-43 18 76M15 111q19-12 38 0t38 0 38 0 38 0M15 122q19-12 38 0t38 0 38 0 38 0"/><circle cx="112" cy="20" r="9"/>',
 };
-const emblems = {
-  laurel: '<path d="M75 143q-44-38-15-85m64 85q44-38 15-85M64 120q-19-4-16-18 17 2 16 18m-8-30Q42 77 51 66q14 8 5 24m77 30q19-4 16-18-17 2-16 18m8-30q14-13 5-24-14 8-5 24M81 104l13 13 28-35"/>',
-  rose: '<path d="M102 118v29m0-14q-22-24-36-11 7 16 36 11m0 5q24-24 37-9-9 13-37 9M102 60q-22-19-32 7-29-1-18 25-17 25 13 32 7 28 32 11 26 15 34-11 29-8 12-32 13-28-16-25-9-23-25-7zM87 83q13-20 28-2 21 14 0 29-21 14-28-5-15-14 0-22zM96 88q17-6 12 13-20 7-12-13"/>',
-  sun: '<circle cx="100" cy="100" r="25"/><path d="M100 49v16m0 70v16M49 100h16m70 0h16M64 64l12 12m48 48 12 12m-72 0 12-12m48-48 12-12M82 53l6 15m24 64 6 15M53 82l15 6m64 24 15 6m-94 0 15-6m64-24 15-6M82 147l6-15m24-64 6-15"/>',
-  moon: '<path d="M117 56a45 45 0 1 0 25 67 39 39 0 0 1-25-67zM128 65l4 10 11 1-9 7 3 11-9-6-9 6 3-11-9-7 11-1zM146 103v12m-6-6h12"/>',
-  shell: '<path d="m80 132-12 4 2-15q-37-25-20-46 8-9 19-3-4-24 16-23 14-22 29 0 22-2 17 23 12-6 20 3 16 22-20 46l2 15-13-4-11 10H91zM100 126V57m-9 67L80 60m2 59L63 80m48 44 10-64m-1 59 19-39M80 132q20-13 40 0"/>',
-  bee: '<ellipse cx="100" cy="109" rx="19" ry="30"/><path d="M83 95h34m-36 16h38m-32 17h26M93 77l-8-15m22 15 8-15M79 96q-43-47-35-5 7 30 35 17m42-12q43-47 35-5-7 30-35 17M100 139v10"/><circle cx="100" cy="74" r="10"/>',
-  butterfly: '<path d="M99 85q-34-47-50-22-15 25 30 42-47 3-27 28 19 23 47-16m2-32q34-47 50-22 15 25-30 42 47 3 27 28-19 23-47-16M100 85v47m-4-50-9-17m17 17 9-17M78 83q-18-16-18-4 1 11 18 14m44-10q18-16 18-4-1 11-18 14"/>',
-  heart: '<path d="M100 140 59 101q-25-33 4-44 25-10 37 14 13-24 37-14 30 11 4 44zM74 70q-14 1-14 14"/>',
-  compass: '<circle cx="100" cy="100" r="42"/><circle cx="100" cy="100" r="33"/><path d="m114 72-7 35-35 21 21-35zM100 49v17m0 68v17M49 100h17m68 0h17M100 57l-4-9h8z"/>',
-  monogram: '<text x="100" y="118" text-anchor="middle" font-family="Georgia,serif" font-size="55" font-style="italic" fill="currentColor" stroke="none">CS</text><path d="M64 137q36 14 72 0M72 62q28-12 56 0"/>',
-};
 const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c]);
 const cache = new Map();
 export function stampSvg(styleId, day = "") {
   const style = stampStyle(styleId);
   const date = validStampDay(day) ? day.slice(8) + "." + day.slice(5, 7) + "." + day.slice(0, 4) : "WELL DONE";
-  if (style.kind === "wax") return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><radialGradient id="wax" cx="35%" cy="28%" r="77%"><stop stop-color="#fff" stop-opacity=".4"/><stop offset=".4" stop-color="${style.color}"/><stop offset="1" stop-color="#000" stop-opacity=".5"/></radialGradient><path id="arc" d="M48 107a53 53 0 0 0 104 0"/></defs><path d="M100 12q18-8 31 7 25-3 32 20 24 9 18 33 19 20 3 41 5 27-21 37-4 26-31 27-15 23-39 9-25 10-39-12-28-2-31-30-24-12-16-37-15-24 5-43-3-26 21-34 12-24 37-15z" fill="${style.color}"/><path d="M100 12q18-8 31 7 25-3 32 20 24 9 18 33 19 20 3 41 5 27-21 37-4 26-31 27-15 23-39 9-25 10-39-12-28-2-31-30-24-12-16-37-15-24 5-43-3-26 21-34 12-24 37-15z" fill="url(#wax)"/><circle cx="100" cy="100" r="70" fill="${style.color}" stroke="#000" stroke-opacity=".25" stroke-width="4"/><circle cx="99" cy="98" r="67" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="2"/><g fill="none" stroke="#000" stroke-opacity=".3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" color="#000" opacity=".7" transform="translate(1 2)">${emblems[style.art]}</g><g fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" color="#fff">${emblems[style.art]}</g><text font-family="Georgia,serif" font-size="8" letter-spacing="2" fill="#fff" fill-opacity=".7"><textPath href="#arc" startOffset="50%" text-anchor="middle">DAY COMPLETE</textPath></text></svg>`;
+  if (style.finish === "pearl") return pearlWaxSvg(style);
+  if (style.kind === "wax") return waxSvg(style);
+  if (style.kind === "cap") return bottleCapSvg(style);
   let holes = "";
   for (let x = 16; x < 180; x += 16) holes += `<circle cx="${x}" cy="6" r="4"/><circle cx="${x}" cy="204" r="4"/>`;
   for (let y = 20; y < 204; y += 16) holes += `<circle cx="6" cy="${y}" r="4"/><circle cx="174" cy="${y}" r="4"/>`;
