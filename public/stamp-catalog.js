@@ -1,4 +1,6 @@
-// 50 postage + 50 engraved wax + 50 retro caps + 50 pearly storybook wax seals.
+// 100 postage + 100 wax + 50 retro caps + 20 embroidered patches.
+import { PATCH_STYLES } from "./patch-catalog.js";
+import { BRIGHT_YEARS_STYLES } from "./bright-years-catalog.js";
 import { PEARL_WAX_STYLES } from "./pearl-wax-catalog.js";
 import { BOTTLE_CAP_STYLES } from "./bottle-cap-catalog.js";
 const destinations = [
@@ -35,6 +37,8 @@ export const STAMP_STYLES = Object.freeze([
   ...waxes.flatMap(([wax, name, color]) => emblems.map(([art, label]) => Object.freeze({ id: `wax-${wax}-${art}`, kind: "wax", name: `${name} · ${label}`, title: label, color, art }))),
   ...BOTTLE_CAP_STYLES,
   ...PEARL_WAX_STYLES,
+  ...BRIGHT_YEARS_STYLES,
+  ...PATCH_STYLES,
 ]);
 export const STAMP_IDS = new Set(STAMP_STYLES.map((s) => s.id));
 export const DEFAULT_STAMP_PREFERENCES = Object.freeze({ enabled: true, style: "post-paris" });
