@@ -48,7 +48,7 @@ Moves preserve the **device-local wall-clock posting time**, caption content, ph
 
 ## Movable calendar completion stamps
 
-The calendar now includes an optional **A little well done** stamp collection: **50 world-place postage designs**, **50 literary postage designs**, **50 engraved wax seals** (10 emblems in five wax finishes), **50 retro soda bottle caps**, **50 pearly storybook wax seals**, and **20 embroidered patches**. All 270 designs are original, bundled vector artwork, with no external image service or font requirement. They are decorative studio stamps, not real postage.
+The calendar now includes an optional **A little well done** stamp collection: **50 world-place postage designs**, **50 literary postage designs**, **50 engraved wax seals** (10 emblems in five wax finishes), **50 retro soda bottle caps**, **50 pearly storybook wax seals**, **20 embroidered patches**, **1 rare one-of-a-kind stamp**, and **1 special embroidered patch**. All 272 designs are original, bundled vector artwork, with no external image service or font requirement. They are decorative studio stamps, not real postage.
 
 Wax seals use original botanical/ornamental engravings, an irregular poured-wax edge, inset impressions and subtle textured highlights. Existing wax IDs and saved choices are preserved; the 50 postage designs are unchanged.
 
@@ -62,13 +62,35 @@ Book identification/theme reference: [Simon & Schuster — The Bright Years by S
 
 The **Embroidered patches** collection adds **20 distinct compositions** across flowers, skies, beach shells, books, calligraphy, art and matcha, often combining themes. The original vector artwork uses colored cloth weave, directional satin-thread patterns, petal/leaf veins, tiny stitches, thread highlights and raised merrow-style borders. Designs have varied silhouettes (oval, round, arched, shield, scalloped and rounded-square) and individual color palettes rather than template recolors. Filter **Embroidered patches · 20 designs**, then search a theme such as *matcha*, *skies*, *beach*, *books* or *calligraphy*. Patch previews are larger for detail inspection; calendar decorations still fit their reserved space. Per-day choice, dragging, keyboard movement, rotation and saved position work exactly like the existing decorations. All previous 250 artworks are unchanged.
 
+### Rare one-of-a-kind: Henlo My Love (Tubby's quest)
+
+A single custom stamp — **Henlo My Love · Rare · One of a kind** (`rare-henlo-love`, kind `rare`) — shows an original scene inspired by *Up*: a couple taking a selfie, a dog with a collar, a boy scout with sash and neckerchief, and a house lifted by colorful balloons in the background. It carries a blue immigration-style cancellation dated **22 NOV 2026** (November 22, 2026) reading “ADMITTED WITH LOVE”, plus “13 POSTED · UNLOCKED WITH LOVE”. The artwork is original vector illustration, not a film still or official merchandise.
+
+**Unlock rule — exactly 13:** the stamp is delivered only when the total number of captions with status **Posted** (archived posted history counts, so archiving never un-earns progress) is **exactly 13**. At 12 Tubby does not appear; at 14 he has already missed you. A small plain **Posted captions** counter sits on the right side of the screen (above the FAB on phones) and simply shows the current number — no goal, no hints. Tubby the cat enters the screen only when that counter reads **13** (or **30** for the special patch below). Tapping the counter jumps to Posted.
+
+**Delivery:** at exactly 13, a small **pixelated Tubby cat** (18×16 crisp-edge pixel SVG, bobbing legs and wagging tail) walks across the bottom of the screen on a loop until clicked. Clicking him opens a small window: **“Congratulations! You've unlocked a rare Stamp”**, the rare stamp below that message (with a matching immigration badge), then the letter revealed **word by word**:
+
+> Henlo my love, you re doing really fine if you've seen this message. I am so proud of you for reaching your dreams, tomorrow will be a big struggle but you'll be fine because I know you're a strong person. I love you so so much! Keep up the good work my love!
+
+“Show all words” skips the reveal; reduced-motion users see all words at once. Opening the window marks the stamp unlocked on that device (`localStorage`, like the theme) and fires confetti — Tubby never returns after that, even if the count later changes.
+
+**Collection & glow:** after unlocking, the rare stamp joins the picker under **Rare · One of a kind · 1 design** (hidden before unlock, so the surprise is kept; the picker then shows 271 styles instead of 270). It uses the same per-day choice, dragging, keyboard movement, rotation and saved placement as other stamps, but glows differently: an animated pink/gold/purple halo (`rare-glow`) instead of the static drop-shadow of postage, wax and patches — in the calendar bay, the picker gallery and the large preview. The server accepts its ID through the existing stamp validators, so a day chosen on one device renders on another.
+
+### Special embroidered patch: Badog Patrol (Tubby's 30 delivery)
+
+At **exactly 30 posted captions**, the same pixel Tubby cat enters the screen again — this time delivering a **special embroidered patch**, **Badog Patrol** (`patch-badog-patrol`). It is a circular embroidered patch (the same fabric weave, satin threads and stitched merrow border as the other 20 patches) showing a **pug and a pomeranian sitting side by side in the middle**, with the lettering **“BADOG PATROL” curving around the top of the circle**. The window that opens shows the patch and this letter, revealed word by word:
+
+> Henlo love, i hope you re doing well there, Keep on living marami pa tayong gagawin together ahihi. Nothing special sa number just checking on you lang. I love you!
+
+Opening the window marks the patch unlocked on that device (`localStorage`, like the rare stamp) and fires confetti. After unlocking, the patch joins the picker under **Special · Badog Patrol · 1 design** (hidden before unlock; the picker then shows 272 styles) with its own distinct glow — an animated amber/teal/orange halo (`special-glow`) in the calendar bay, gallery and large preview, distinct from both the rare stamp's pink/purple glow and plain patches. The same exact-number rule applies: at 29 or 31 Tubby does not appear, and the delivery is missed once the count moves past 30 without opening the window.
+
 ### When a stamp appears
 
 A day earns one stamp when it has **at least one scheduled caption and every caption scheduled on that device-local date is marked Posted**. The calculation uses all saved captions, independently of search/content filters, and includes archived posted history. Empty days, unscheduled ideas, and partly finished days do not qualify. Reverting a caption to Draft/Ready removes the visible stamp; completing the day again restores it in its remembered position. The app currently has **no separate goals tracker**, so this feature does not claim to verify other goals or off-app work. No content-gap nudges, reminders, or Telegram messages are added.
 
 ### Choosing and arranging
 
-- Tap any completed day’s stamp, or use **Choose a completed day → Choose stamp for this day · 270 styles**. Browse/search all 270 designs and press **Use for this day only**. This saves an individual choice without changing other days, the shared default, or that day’s position/tilt. No Arrange mode is needed; Cancel makes no change.
+- Tap any completed day’s stamp, or use **Choose a completed day → Choose stamp for this day · 270 styles** (271 after the rare stamp is unlocked, 272 after the special patch is also unlocked). Browse/search all designs and press **Use for this day only**. This saves an individual choice without changing other days, the shared default, or that day’s position/tilt. No Arrange mode is needed; Cancel makes no change.
 - **Change shared default** is a separate, explicitly labeled action. It affects only days without their own stamp choice; individually chosen stamps remain unchanged.
 - Choose **Arrange stamps** to move stamps using a mouse or finger. Select a completed day in the inspector, or select its stamp. Focus a stamp and use arrow keys (Shift for larger steps), or use the directional buttons. Adjust **Tilt** between −18° and +18°.
 - The day picker sets an individual style; **Use default style for this day** removes that style override. **Reset position** restores corner placement and the default tilt while keeping the day’s selected style.

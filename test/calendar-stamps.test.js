@@ -5,14 +5,16 @@ import { STAMP_STYLES, STAMP_IDS, DEFAULT_STAMP_PLACEMENT, completedCaptionDays,
 import { stampSvg, stampImageUrl } from "../public/stamp-art.js";
 import { normalizeSettings } from "../src/lib.js";
 
-test("270 distinct designs include 20 original embroidered patches", () => {
-  assert.equal(STAMP_STYLES.length, 270); assert.equal(STAMP_IDS.size, 270);
+test("272 distinct designs include 20 original embroidered patches, 1 rare one-of-a-kind and 1 special patch", () => {
+  assert.equal(STAMP_STYLES.length, 272); assert.equal(STAMP_IDS.size, 272);
   assert.equal(STAMP_STYLES.filter((s) => s.kind === "postage").length, 100);
   assert.equal(STAMP_STYLES.filter((s) => s.kind === "wax").length, 100);
-  assert.equal(new Set(STAMP_STYLES.map((s) => s.name)).size, 270);
+  assert.equal(new Set(STAMP_STYLES.map((s) => s.name)).size, 272);
   assert.equal(STAMP_STYLES.filter((s) => s.kind === "cap").length, 50);
+  assert.equal(STAMP_STYLES.filter((s) => s.kind === "rare").length, 1);
+  assert.equal(STAMP_STYLES.filter((s) => s.special).length, 1);
   const images = STAMP_STYLES.map((s) => stampSvg(s.id));
-  assert.equal(new Set(images).size, 270);
+  assert.equal(new Set(images).size, 272);
   for (const [index, svg] of images.entries()) {
     assert.match(svg, /^<svg xmlns=/); assert.doesNotMatch(svg, /undefined|<script|<foreignObject|onload=|https?:\/\/(?!www.w3.org\/2000\/svg)/);
     assert.ok(svg.length < (STAMP_STYLES[index].kind === "patch" ? 16000 : 12000));
@@ -127,7 +129,7 @@ test("50 new pearly wax seals have distinct motifs split evenly between Harry Po
 
 test("the previous 150 postage, engraved wax and cap renderings stay unchanged", async () => {
   const { createHash } = await import("node:crypto");
-  const previous = STAMP_STYLES.filter((s) => s.finish !== "pearl" && s.collectionId !== "bright-years" && s.kind !== "patch");
+  const previous = STAMP_STYLES.filter((s) => s.finish !== "pearl" && s.collectionId !== "bright-years" && s.kind !== "patch" && s.kind !== "rare");
   assert.equal(previous.length, 150);
   const rendered = previous.map((s) => stampSvg(s.id, "2026-11-12")).join("\n");
   assert.equal(createHash("sha256").update(rendered).digest("hex"), "45e1e4dbd083a74b9e389855aae922bfd0407da6278e0f5f65754b51e282d6e5");
@@ -152,7 +154,7 @@ test("50 distinct spoiler-light Bright Years postage designs identify Sarah Damo
 
 test("all previous 200 designs retain their exact artwork", async () => {
   const { createHash } = await import('node:crypto');
-  const previous = STAMP_STYLES.filter((s) => s.collectionId !== 'bright-years' && s.kind !== 'patch');
+  const previous = STAMP_STYLES.filter((s) => s.collectionId !== 'bright-years' && s.kind !== 'patch' && s.kind !== 'rare');
   assert.equal(previous.length, 200);
   const rendered = previous.map((s) => stampSvg(s.id, '2026-11-12')).join('\n');
   assert.equal(createHash('sha256').update(rendered).digest('hex'), '9a59590fec1b2e64b86eb72ed1adc8dea1df2b10b7853bb1e36acdad512f12f7');

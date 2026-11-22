@@ -3,6 +3,7 @@ import { BRIGHT_YEARS_ART } from "./bright-years-art.js";
 import { pearlWaxSvg } from "./pearl-wax-art.js";
 import { waxSvg } from "./wax-art.js";
 import { bottleCapSvg } from "./bottle-cap-art.js";
+import { rareStampSvg } from "./rare-stamp-art.js";
 import { stampStyle, validStampDay } from "./stamp-catalog.js";
 // Original, lightweight line engravings; trusted local SVG, never user-provided markup.
 const art = {
@@ -62,6 +63,7 @@ const cache = new Map();
 export function stampSvg(styleId, day = "") {
   const style = stampStyle(styleId);
   const date = validStampDay(day) ? day.slice(8) + "." + day.slice(5, 7) + "." + day.slice(0, 4) : "WELL DONE";
+  if (style.kind === "rare") return rareStampSvg(style, day);
   if (style.kind === "patch") return patchSvg(style);
   if (style.finish === "pearl") return pearlWaxSvg(style);
   if (style.kind === "wax") return waxSvg(style);
