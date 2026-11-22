@@ -1,3 +1,4 @@
+import { normalizeStampPreferences } from "../public/stamp-catalog.js";
 import { normalizeBrandIcon } from "../public/branding.js";
 
 /** Pure helpers shared by the worker (and unit tests). No Cloudflare APIs in here. */
@@ -14,6 +15,7 @@ export const CONTENT_TYPES_VERSION = 2;
 export const DEFAULT_SETTINGS = {
   app_name: "Caption Studio",
   brand_icon: { mode: "theme" },
+  completion_stamps: { enabled: true, style: "post-paris" },
   caption_templates: [],
   content_types: ["Showcase", "Relatable", "Trend", "Motivational", "Feedbacks", "Educational", "Personal/Brand", "Mini Quiz"],
   platforms: ["Instagram", "TikTok", "Facebook", "YouTube", "Threads", "X"],
@@ -59,6 +61,7 @@ export function isValidTimeZone(tz) {
 export function normalizeSettings(raw = {}) {
   const s = { ...DEFAULT_SETTINGS };
   if (raw.app_name !== undefined) s.app_name = str(raw.app_name, 60) || DEFAULT_SETTINGS.app_name;
+  if (raw.completion_stamps !== undefined) s.completion_stamps = normalizeStampPreferences(raw.completion_stamps);
   if (raw.brand_icon !== undefined) s.brand_icon = normalizeBrandIcon(raw.brand_icon);
   if (raw.caption_templates !== undefined) s.caption_templates = normalizeTemplates(raw.caption_templates);
   if (raw.content_types !== undefined) s.content_types = cleanList(raw.content_types, DEFAULT_SETTINGS.content_types);

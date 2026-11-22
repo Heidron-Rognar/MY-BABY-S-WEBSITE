@@ -46,6 +46,25 @@ On desktop, drag an unposted calendar caption to another day. On touch devices o
 
 Moves preserve the **device-local wall-clock posting time**, caption content, photos, status, and reminder offsets; reminders follow the new scheduled timestamp. The confirmation explicitly warns about dates in the past. Invalid daylight-saving times are rejected so they can be corrected in the editor. Posted/archived history cannot be moved. The server rejects stale-page conflicts instead of overwriting a newer change, and unsuccessful requests leave the saved schedule unchanged. As with the existing editor/calendar, posting dates display in the device's timezone; Telegram digest settings continue to use the configured reminder timezone.
 
+## Movable calendar completion stamps
+
+The calendar now includes an optional **A little well done** stamp collection: **50 world-place postage designs** and **50 wax seals** (10 emblems in five wax finishes). All 100 designs are original, bundled vector artwork, with no external image service or font requirement. They are decorative studio stamps, not real postage.
+
+### When a stamp appears
+
+A day earns one stamp when it has **at least one scheduled caption and every caption scheduled on that device-local date is marked Posted**. The calculation uses all saved captions, independently of search/content filters, and includes archived posted history. Empty days, unscheduled ideas, and partly finished days do not qualify. Reverting a caption to Draft/Ready removes the visible stamp; completing the day again restores it in its remembered position. The app currently has **no separate goals tracker**, so this feature does not claim to verify other goals or off-app work. No content-gap nudges, reminders, or Telegram messages are added.
+
+### Choosing and arranging
+
+- In **Calendar → Choose stamp · 100 styles**, browse all designs or filter postage/wax and search destinations/emblems. Select a design and press **Use this stamp**; Cancel makes no change. The default style applies to days without an individual override.
+- Choose **Arrange stamps** to move stamps using a mouse or finger. Select a completed day in the inspector, or select its stamp. Focus a stamp and use arrow keys (Shift for larger steps), or use the directional buttons. Adjust **Tilt** between −18° and +18°.
+- **Change this day’s stamp** sets an individual style; **Use default style for this day** removes that style override. **Reset position** restores corner placement and the default tilt while keeping the day’s selected style.
+- **Done arranging** restores ordinary calendar interactions. Caption opening/drag-rescheduling is paused inside day boxes while arranging, so stamp gestures cannot accidentally move a post. The normal caption move controls return afterward.
+- Stamps live in reserved space below date/task information, not over caption labels. Movement is constrained to this space inside the original day. Position is stored proportionally and bounded using the rotated stamp’s corners, so desktop and phone layouts stay legible. Narrow phone boxes necessarily have less horizontal movement.
+- **Show completion stamps** turns the feature off without deleting layouts. There are no notifications or overdue warnings.
+
+Preferences and per-day placements/styles are stored in D1 and sync across devices on reload or returning to the calendar tab. Dates follow the viewing device’s local calendar (the same convention as the existing calendar), not the Telegram digest timezone. Concurrent edits to the same stamp are rejected with a reload/retry message instead of silently overwriting another device; a failed save is never reported as successful. Layout is decoration only: stored positions cannot award an incomplete day a stamp. Caption/photo/template portable backups do not include these cosmetic preferences or layouts; a restored day’s eligibility is recalculated from its captions.
+
 ## Title icon personalization
 
 In **Settings → Personalize → Icon beside your title**, choose **Original theme icon**, **Choose an emoji**, or **Upload an image**. Preview changes before pressing **Save icon**. A custom choice syncs through the database and appears beside the signed-in studio title on other devices after reloading. **Use original theme icon** resets it to the current theme's original badge/ornament treatment, including themes that normally hide the badge.

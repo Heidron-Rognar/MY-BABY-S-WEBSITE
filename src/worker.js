@@ -9,6 +9,7 @@
 
 import { exportBackupPost, restoreBackupPost, readBackupBody } from "./backup.js";
 import { validateBackupPost, validateBackupTemplates } from "../public/backup.js";
+import { validStampDay, validateStampPlacement, validateStampPreferences } from "../public/stamp-catalog.js";
 import { validateBrandIcon } from "../public/branding.js";
 import { Buffer } from "node:buffer";
 import {
@@ -43,6 +44,10 @@ let schemaPromise = null;
 function ensureSchema(env) {
   if (!schemaPromise) {
     schemaPromise = env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS calendar_stamps (
+        day TEXT PRIMARY KEY, x REAL NOT NULL, y REAL NOT NULL, rotation INTEGER NOT NULL,
+        style TEXT, updated_at TEXT NOT NULL
+      )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL DEFAULT '',
@@ -685,6 +690,32 @@ async function handleApi(request, env, url) {
     return json({ ok: true, settings: publicSettings(settings), statuses: STATUSES });
   }
 
+  /* Stamp layout is decoration only; completion is always derived from all posts. */
+  if (path === "/api/calendar-stamps" && method === "GET") {
+    const start = url.searchParams.get("start"), end = url.searchParams.get("end");
+    if (!validStampDay(start) || !validStampDay(end) || end < start || Date.parse(end) - Date.parse(start) > 62 * 86400000) return error("Choose a calendar range of at most 63 days");
+    const { results } = await env.DB.prepare("SELECT * FROM calendar_stamps WHERE day >= ? AND day <= ? ORDER BY day").bind(start, end).all();
+    return json({ stamps: results });
+  }
+  const stampDay = path.match(/^\/api\/calendar-stamps\/(\d{4}-\d{2}-\d{2})$/);
+  if (stampDay && method === "PUT") {
+    const day = stampDay[1];
+    if (!validStampDay(day)) return error("Invalid calendar day");
+    const body = (await readJson(request)) || {};
+    let placement;
+    try { placement = validateStampPlacement(body); } catch (err) { return error(err.message); }
+    const previous = await env.DB.prepare("SELECT * FROM calendar_stamps WHERE day = ?").bind(day).first();
+    if (body.expected_updated_at !== (previous?.updated_at ?? null)) return error("This stamp changed on another device. Reload its placement and try again.", 409);
+    const updated = new Date(Math.max(Date.now(), previous ? Date.parse(previous.updated_at) + 1 : 0)).toISOString();
+    const row = await env.DB.prepare(
+      `INSERT INTO calendar_stamps (day, x, y, rotation, style, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(day) DO UPDATE SET x = excluded.x, y = excluded.y, rotation = excluded.rotation,
+       style = excluded.style, updated_at = excluded.updated_at WHERE calendar_stamps.updated_at = ? RETURNING *`
+    ).bind(day, placement.x, placement.y, placement.rotation, placement.style, updated, previous?.updated_at ?? null).first();
+    if (!row) return error("This stamp changed on another device. Reload its placement and try again.", 409);
+    return json({ stamp: row });
+  }
+
   /* ---------- portable backups (additive restore, never delete/replace) ---------- */
   if (path === "/api/backup/info" && method === "GET") {
     const { results } = await env.DB.prepare("SELECT id, created_at, updated_at, restore_key FROM posts ORDER BY id").all();
@@ -979,6 +1010,7 @@ async function handleApi(request, env, url) {
     const allowed = [
       "app_name",
       "brand_icon",
+      "completion_stamps",
       "caption_templates",
       "content_types",
       "platforms",
@@ -993,6 +1025,10 @@ async function handleApi(request, env, url) {
     for (const k of allowed) if (k in body) patch[k] = body[k];
     if ("brand_icon" in patch) {
       try { patch.brand_icon = validateBrandIcon(patch.brand_icon); }
+      catch (err) { return error(err.message); }
+    }
+    if ("completion_stamps" in patch) {
+      try { patch.completion_stamps = validateStampPreferences(patch.completion_stamps); }
       catch (err) { return error(err.message); }
     }
     const next = normalizeSettings({ ...current, ...patch });
