@@ -261,9 +261,11 @@ async function isAuthed(request, env) {
 
 // EMBEDDED_PREVIEW=1 (local testing only, set in .dev.vars) lets the login cookie
 // work when the site is shown inside another page's frame (e.g. a preview window).
-// Production keeps the stricter SameSite=Lax.
+// Production keeps the stricter SameSite=Lax. Never force Secure for a plain-HTTP
+// local request: browsers silently drop Secure cookies over http, which would keep
+// the user stuck on the login screen even though /api/login returns 200.
 function sessionCookie(value, maxAge, secure, embedded) {
-  const site = embedded ? "SameSite=None; Secure; Partitioned" : `SameSite=Lax${secure ? "; Secure" : ""}`;
+  const site = embedded ? `SameSite=None${secure ? "; Secure" : ""}` : `SameSite=Lax${secure ? "; Secure" : ""}`;
   return `${SESSION_COOKIE}=${encodeURIComponent(value)}; Path=/; HttpOnly; ${site}; Max-Age=${maxAge}`;
 }
 

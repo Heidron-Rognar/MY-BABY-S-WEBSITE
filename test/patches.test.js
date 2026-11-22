@@ -33,7 +33,7 @@ test('patch artwork has fabric weave, satin thread, raised details and stitched 
 });
 
 test('all prior 250 artworks remain byte-for-byte unchanged', () => {
-  const previous = STAMP_STYLES.filter((s) => s.kind !== 'patch');
+  const previous = STAMP_STYLES.filter((s) => s.kind !== 'patch' && s.kind !== 'rare');
   assert.equal(previous.length, 250);
   const rendered = previous.map((s) => stampSvg(s.id, '2026-11-12')).join('\n');
   assert.equal(createHash('sha256').update(rendered).digest('hex'), '0355966d685189dde535f343e109d957aead53c264194ef99d55c6a98d15beb3');

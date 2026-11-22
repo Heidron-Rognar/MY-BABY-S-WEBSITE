@@ -1,8 +1,53 @@
-// 100 postage + 100 wax + 50 retro caps + 20 embroidered patches.
+// 100 postage + 100 wax + 50 retro caps + 20 embroidered patches + 1 rare one-of-a-kind + 1 special patch.
 import { PATCH_STYLES } from "./patch-catalog.js";
 import { BRIGHT_YEARS_STYLES } from "./bright-years-catalog.js";
 import { PEARL_WAX_STYLES } from "./pearl-wax-catalog.js";
 import { BOTTLE_CAP_STYLES } from "./bottle-cap-catalog.js";
+
+// One-of-a-kind rare stamp: unlocked only at exactly 13 posted captions (see rare-stamp.js).
+export const RARE_STAMP_ID = "rare-henlo-love";
+export const RARE_STAMP_GOAL = 13;
+export const RARE_STAMP_DATE = "2026-11-22";
+export const RARE_STAMP_DATE_LABEL = "22 NOV 2026";
+export const RARE_STAMP_MESSAGE =
+  "Henlo my love, you re doing really fine if you've seen this message. I am so proud of you for reaching your dreams, tomorrow will be a big struggle but you'll be fine because I know you're a strong person. I love you so so much! Keep up the good work my love!";
+export const RARE_UNLOCK_KEY = "cs-rare-stamp-unlocked";
+export const RARE_UNLOCKED_AT_KEY = "cs-rare-stamp-unlocked-at";
+export const RARE_STAMP_STYLE = Object.freeze({
+  id: RARE_STAMP_ID,
+  kind: "rare",
+  collectionId: "rare",
+  collection: "Rare · One of a kind",
+  name: "Henlo My Love · Rare · One of a kind",
+  title: "Henlo My Love",
+  country: "One of a kind",
+  header: "HENLO MY LOVE",
+  color: "#7a3ea8",
+  art: "up-love-selfie",
+  tags: "rare one of a kind up selfie couple dog boy scout house balloons henlo love immigration adventure",
+});
+
+// Special embroidered patch: delivered by Tubby at exactly 30 posted captions (see rare-stamp.js).
+export const BADOG_PATROL_ID = "patch-badog-patrol";
+export const BADOG_PATROL_GOAL = 30;
+export const BADOG_PATROL_MESSAGE =
+  "Henlo love, i hope you re doing well there, Keep on living marami pa tayong gagawin together ahihi. Nothing special sa number just checking on you lang. I love you!";
+export const BADOG_UNLOCK_KEY = "cs-badog-patrol-unlocked";
+export const BADOG_UNLOCKED_AT_KEY = "cs-badog-patrol-unlocked-at";
+export const BADOG_PATROL_STYLE = Object.freeze({
+  id: BADOG_PATROL_ID,
+  kind: "patch",
+  special: true,
+  collectionId: "badog-patrol",
+  collection: "Special embroidered patch",
+  name: "Badog Patrol · Special embroidered patch",
+  title: "Badog Patrol",
+  art: "badog-patrol",
+  tags: "special embroidered patch pug pomeranian dogs badog patrol tubby 30",
+  shape: "circle",
+  color: "#3a3f6e",
+  border: "#e8c06a",
+});
 const destinations = [
   ["paris", "Paris", "France", "#426d86"], ["london", "London", "England", "#944e50"],
   ["rome", "Rome", "Italy", "#a16a43"], ["kyoto", "Kyoto", "Japan", "#976582"],
@@ -39,6 +84,8 @@ export const STAMP_STYLES = Object.freeze([
   ...PEARL_WAX_STYLES,
   ...BRIGHT_YEARS_STYLES,
   ...PATCH_STYLES,
+  RARE_STAMP_STYLE,
+  BADOG_PATROL_STYLE,
 ]);
 export const STAMP_IDS = new Set(STAMP_STYLES.map((s) => s.id));
 export const DEFAULT_STAMP_PREFERENCES = Object.freeze({ enabled: true, style: "post-paris" });
@@ -77,6 +124,42 @@ export function completedCaptionDays(posts) {
     if (post.status === "posted") day.posted++;
   }
   return new Map([...days].filter(([, d]) => d.total > 0 && d.total === d.posted));
+}
+/** Total posted captions (archived history counts — archiving never un-earns progress). */
+export function postedCaptionCount(posts) {
+  if (!Array.isArray(posts)) return 0;
+  return posts.filter((p) => p && p.status === "posted").length;
+}
+/** Tubby only visits at exactly the goal — not before, not after. */
+export function isRareStampGoal(count) {
+  return count === RARE_STAMP_GOAL;
+}
+/** Special patch: Tubby delivers it at exactly 30 posted captions. */
+export function isBadogPatrolGoal(count) {
+  return count === BADOG_PATROL_GOAL;
+}
+export function isRareStampUnlocked(storage) {
+  try {
+    const store = storage ?? globalThis.localStorage;
+    return store?.getItem(RARE_UNLOCK_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+export function isBadogPatrolUnlocked(storage) {
+  try {
+    const store = storage ?? globalThis.localStorage;
+    return store?.getItem(BADOG_UNLOCK_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+export function visibleStampStyles(storage) {
+  return STAMP_STYLES.filter((s) => {
+    if (s.kind === "rare") return isRareStampUnlocked(storage);
+    if (s.special) return isBadogPatrolUnlocked(storage);
+    return true;
+  });
 }
 // Bound the entire rotated stamp, not only its unrotated corners.
 export function stampBounds(width, height, bayWidth, bayHeight, rotation) {

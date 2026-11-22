@@ -4,8 +4,10 @@ import { RECOVERY_KEY, cleanDraft, draftKey, readDrafts, writeDrafts, moveToLoca
 import { applyBrandIcon, initBrandIconControls } from "./branding.js";
 import { initBackupTools } from "./backup-ui.js";
 import { initDailyInspiration } from "./daily-inspiration.js";
+import { initRareStamp } from "./rare-stamp.js";
 
 let dailyInspiration;
+let rareStamp;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -304,6 +306,7 @@ function matchesSearch(p) {
 function showLogin() {
   dailyInspiration?.destroy();
   dailyInspiration = undefined;
+  rareStamp?.hideAll();
   $("#app").hidden = true;
   $("#login").hidden = false;
   $("#editor").open && $("#editor").close();
@@ -324,6 +327,16 @@ async function boot() {
   $("#app").hidden = false;
   if (!dailyInspiration) dailyInspiration = initDailyInspiration(currentTheme);
   else dailyInspiration.refresh();
+  if (!rareStamp) {
+    rareStamp = initRareStamp({
+      getPosts: () => state.posts,
+      onUnlock: (delivery) => {
+        confetti();
+        toast(delivery?.key === "cs-badog-patrol-unlocked" ? "Special patch delivered! 🐾" : "Rare stamp unlocked! ✨");
+        render();
+      },
+    });
+  }
   applyBranding();
   await loadPosts();
   renderRecoveryBanner();
@@ -419,6 +432,7 @@ function updateCounts() {
   set("upcoming", upcoming);
   set("ideas", ideas);
   set("posted", posted);
+  rareStamp?.refresh();
 }
 
 function renderTypeFilter() {

@@ -1,4 +1,4 @@
-import { STAMP_STYLES, stampStyle, DEFAULT_STAMP_PLACEMENT, normalizeStampPreferences, completedCaptionDays, stampBounds } from "./stamp-catalog.js";
+import { STAMP_STYLES, stampStyle, DEFAULT_STAMP_PLACEMENT, normalizeStampPreferences, completedCaptionDays, stampBounds, visibleStampStyles } from "./stamp-catalog.js";
 import { stampImageUrl } from "./stamp-art.js";
 const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const clamp = (n) => Math.max(0, Math.min(1, n));
@@ -44,7 +44,7 @@ export function createCalendarStamps({ api, getPosts, getPreferences, savePrefer
       <label class="check"><input type="checkbox" id="show-completion-stamps" ${pref.enabled ? "checked" : ""} ${saving ? "disabled" : ""}/> Show completion stamps</label>
       <p class="small muted">Default: ${esc(stampStyle(pref.style).name)}. Placement and per-day styles sync across devices. Captions stay above a reserved stamp area.</p>
       ${editable ? `<div class="stamp-inspector"><label class="field"><span>Choose a completed day</span><select id="stamp-day-choice" ${!selectedDay || saving ? "disabled" : ""}>${selectedDay ? days.filter((day) => completed.has(day)).map((day) => `<option value="${day}" ${selectedDay === day ? "selected" : ""}>${day} · ${completed.get(day).total} posted</option>`).join("") : '<option value="">No completed days in this calendar</option>'}</select></label>
-      <button type="button" class="btn btn-ghost btn-sm" data-stamp-action="day-style" ${!selectedDay || saving ? "disabled" : ""}>Choose stamp for this day · ${STAMP_STYLES.length} styles</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-stamp-action="day-style" ${!selectedDay || saving ? "disabled" : ""}>Choose stamp for this day · ${visibleStampStyles().length} styles</button>
       <p class="small muted">Tap a stamp or select a date above. Your choice changes only that day, not other days or the shared default.</p>
       <p class="small" id="stamp-selected-style">${selectedDay ? esc(imageStyle(selectedDay).name) : ""}</p>
       ${arranging ? `<p class="small" id="stamp-arrange-help">Drag a stamp with your mouse or finger within its day. Or focus it and use arrow keys (Shift for larger steps). Caption rescheduling is paused while arranging.</p>
@@ -58,7 +58,7 @@ export function createCalendarStamps({ api, getPosts, getPreferences, savePrefer
   function dayHTML(day) {
     if (!preferences().enabled || !loaded() || !completed.has(day)) return "";
     const style = imageStyle(day);
-    return `<div class="stamp-bay"><button type="button" class="completion-stamp ${style.kind}" data-stamp-day="${day}" aria-label="${day}: all ${completed.get(day).total} captions posted. ${esc(style.name)} stamp. ${arranging ? "Use arrow keys to move." : "Choose a stamp for this day only."}" ${saving ? "disabled" : ""}><img src="${stampImageUrl(style.id, day)}" alt="" draggable="false" /></button></div>`;
+    return `<div class="stamp-bay"><button type="button" class="completion-stamp ${style.kind}${style.special ? " special" : ""}" data-stamp-day="${day}" aria-label="${day}: all ${completed.get(day).total} captions posted. ${esc(style.name)} stamp. ${arranging ? "Use arrow keys to move." : "Choose a stamp for this day only."}" ${saving ? "disabled" : ""}><img src="${stampImageUrl(style.id, day)}" alt="" draggable="false" /></button></div>`;
   }
   function paint(button, value = placement(button.dataset.stampDay)) {
     const bay = button.parentElement;
@@ -184,24 +184,28 @@ export function createCalendarStamps({ api, getPosts, getPreferences, savePrefer
     picker?.remove();
     picker = document.createElement("dialog"); picker.className = "stamp-picker"; picker.setAttribute("aria-labelledby", "stamp-picker-title");
     let choice = targetDay ? imageStyle(targetDay).id : preferences().style;
-    picker.innerHTML = `<header><div><h2 id="stamp-picker-title">Choose a little celebration</h2><p class="muted small">100 postage designs, including 50 inspired by The Bright Years by Sarah Damoff · 100 wax seals · 50 retro caps · 20 embroidered patches. ${targetDay ? `For ${targetDay} only. Other days and your shared default will not change.` : "Shared default: changes every day without its own style. Individually chosen stamps stay unchanged."}</p></div><button type="button" class="icon-btn" id="stamp-picker-close" aria-label="Close stamp picker">✕</button></header>
+    const visible = visibleStampStyles();
+    const hasRare = visible.some((s) => s.kind === "rare");
+    const hasSpecial = visible.some((s) => s.special);
+    picker.innerHTML = `<header><div><h2 id="stamp-picker-title">Choose a little celebration</h2><p class="muted small">100 postage designs, including 50 inspired by The Bright Years by Sarah Damoff · 100 wax seals · 50 retro caps · 20 embroidered patches${hasRare ? " · 1 rare one-of-a-kind (glows)" : ""}${hasSpecial ? " · 1 special patch (glows)" : ""}. ${targetDay ? `For ${targetDay} only. Other days and your shared default will not change.` : "Shared default: changes every day without its own style. Individually chosen stamps stay unchanged."}</p></div><button type="button" class="icon-btn" id="stamp-picker-close" aria-label="Close stamp picker">✕</button></header>
       <div class="stamp-picker-preview"><img id="stamp-big-preview" alt=""/><div><strong id="stamp-preview-name"></strong><p class="small muted">Original decorative artwork. Original decorative tributes, not official postage or affiliated merchandise. Literary motifs are spoiler-light thematic interpretations.</p></div></div>
-      <div class="stamp-picker-filters"><label class="field"><span>Find a stamp</span><input type="search" id="stamp-search" placeholder="Flowers, matcha, shells, The Bright Years…" /></label><label class="field"><span>Collection</span><select id="stamp-kind"><option value="all">All ${STAMP_STYLES.length} styles</option><option value="postage">All postage · 100 styles</option><option value="destinations">World places · 50 styles</option><option value="bright-years">The Bright Years · 50 styles</option><option value="wax">All wax seals · 100 styles</option><option value="pearl">Pearly storybook wax · 50 styles</option><option value="harry-potter">Pearl · Harry Potter · 25</option><option value="enola-holmes">Pearl · Enola Holmes · 25</option><option value="cap">Bottle caps · 50 styles</option><option value="patch">Embroidered patches · 20 designs</option></select></label></div>
+      <div class="stamp-picker-filters"><label class="field"><span>Find a stamp</span><input type="search" id="stamp-search" placeholder="Flowers, matcha, shells, The Bright Years…" /></label><label class="field"><span>Collection</span><select id="stamp-kind"><option value="all">All ${visible.length} styles</option><option value="postage">All postage · 100 styles</option><option value="destinations">World places · 50 styles</option><option value="bright-years">The Bright Years · 50 styles</option><option value="wax">All wax seals · 100 styles</option><option value="pearl">Pearly storybook wax · 50 styles</option><option value="harry-potter">Pearl · Harry Potter · 25</option><option value="enola-holmes">Pearl · Enola Holmes · 25</option><option value="cap">Bottle caps · 50 styles</option><option value="patch">Embroidered patches · 20 designs</option>${hasRare ? '<option value="rare">Rare · One of a kind · 1 design</option>' : ""}${hasSpecial ? '<option value="special">Special · Badog Patrol · 1 design</option>' : ""}</select></label></div>
       <p class="small muted" id="stamp-results" role="status"></p><div class="stamp-gallery" aria-label="Stamp styles"></div>
       <footer><p id="stamp-picker-status" class="small" role="status">Select a style, then apply it.</p><button type="button" class="btn btn-ghost" id="stamp-picker-cancel">Cancel</button><button type="button" class="btn btn-primary" id="stamp-picker-apply">${targetDay ? "Use for this day only" : "Update shared default"}</button></footer>`;
     document.body.append(picker);
     const find = (s) => picker.querySelector(s);
     function preview() {
-      find("#stamp-big-preview").dataset.kind = stampStyle(choice).kind;
+      const chosen = stampStyle(choice);
+      find("#stamp-big-preview").dataset.kind = chosen.special ? "special" : chosen.kind;
       find("#stamp-big-preview").src = stampImageUrl(choice, targetDay || "");
-      find("#stamp-preview-name").textContent = stampStyle(choice).name;
+      find("#stamp-preview-name").textContent = chosen.name;
       picker.querySelectorAll("[data-style]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.style === choice)));
     }
     function gallery() {
       const query = find("#stamp-search").value.trim().toLocaleLowerCase(), kind = find("#stamp-kind").value;
-      const matches = STAMP_STYLES.filter((s) => (kind === "all" || s.kind === kind || (kind === "bright-years" && s.collectionId === "bright-years") || (kind === "destinations" && s.kind === "postage" && !s.collectionId) || (kind === "pearl" && s.finish === "pearl") || (s.finish === "pearl" && s.collectionId === kind)) && `${s.name} ${s.tags || ""} ${s.finish === "pearl" ? "pearl pearly white ivory embossed storybook wax" : ""} ${s.kind === "wax" && s.art === "laurel" ? "wildflowers botanical bouquet" : ""} ${s.kind === "cap" ? "retro soda softdrink bottle cap" : ""}`.toLocaleLowerCase().includes(query));
-      find(".stamp-gallery").innerHTML = matches.map((s) => `<button type="button" data-style="${s.id}" aria-pressed="${s.id === choice}"><img src="${stampImageUrl(s.id)}" alt="" loading="lazy" draggable="false"/><span>${esc(s.name)}</span><small>${s.kind === "patch" ? "Embroidered patch" : s.finish === "pearl" ? "Pearly embossed wax" : s.kind === "wax" ? "Engraved wax seal" : s.kind === "cap" ? "Retro bottle cap" : s.collectionId === "bright-years" ? "Literary postage · Sarah Damoff" : "Vintage postage"}</small></button>`).join("");
-      find("#stamp-results").textContent = `${matches.length} of ${STAMP_STYLES.length} styles`; preview();
+      const matches = visibleStampStyles().filter((s) => (kind === "all" || s.kind === kind || (kind === "special" && s.special) || (kind === "bright-years" && s.collectionId === "bright-years") || (kind === "destinations" && s.kind === "postage" && !s.collectionId) || (kind === "pearl" && s.finish === "pearl") || (s.finish === "pearl" && s.collectionId === kind)) && `${s.name} ${s.tags || ""} ${s.finish === "pearl" ? "pearl pearly white ivory embossed storybook wax" : ""} ${s.kind === "wax" && s.art === "laurel" ? "wildflowers botanical bouquet" : ""} ${s.kind === "cap" ? "retro soda softdrink bottle cap" : ""}`.toLocaleLowerCase().includes(query));
+      find(".stamp-gallery").innerHTML = matches.map((s) => `<button type="button" data-style="${s.id}" aria-pressed="${s.id === choice}"><img src="${stampImageUrl(s.id)}" alt="" loading="lazy" draggable="false"/><span>${esc(s.name)}</span><small>${s.special ? "Special embroidered patch — glows" : s.kind === "rare" ? "Rare · One of a kind — glows" : s.kind === "patch" ? "Embroidered patch" : s.finish === "pearl" ? "Pearly embossed wax" : s.kind === "wax" ? "Engraved wax seal" : s.kind === "cap" ? "Retro bottle cap" : s.collectionId === "bright-years" ? "Literary postage · Sarah Damoff" : "Vintage postage"}</small></button>`).join("");
+      find("#stamp-results").textContent = `${matches.length} of ${visibleStampStyles().length} styles`; preview();
     }
     find("#stamp-search").addEventListener("input", gallery); find("#stamp-kind").addEventListener("change", gallery);
     find(".stamp-gallery").addEventListener("click", (event) => { const option = event.target.closest("[data-style]"); if (option) { choice = option.dataset.style; preview(); } });
